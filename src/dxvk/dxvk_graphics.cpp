@@ -1151,7 +1151,7 @@ namespace dxvk {
     }
 
     //Write pipeline to state cache
-    if (gplAsyncCache) {
+    if (gplAsyncCache)
       this->writePipelineStateToCache(state);
   }
 
