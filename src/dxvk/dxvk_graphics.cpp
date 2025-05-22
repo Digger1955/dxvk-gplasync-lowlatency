@@ -1401,6 +1401,8 @@ namespace dxvk {
     if (handle)
       m_fastPipelines.insert({ key, handle });
 
+    m_async = false;
+
     return handle;
   }
 
