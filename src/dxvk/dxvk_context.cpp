@@ -7246,7 +7246,7 @@ bool DxvkContext::checkAsyncCompilationCompat() {
     // End render pass if there are pending resolves
     if (m_flags.any(DxvkContextFlag::GpDirtyFramebuffer,
                     DxvkContextFlag::GpRenderPassNeedsFlush))
-      this->updateFramebuffer();
+      this->updateFramebuffer(true);
 
     if (m_flags.test(DxvkContextFlag::GpXfbActive)) {
       // If transform feedback is active and there is a chance that we might
