@@ -7188,7 +7188,15 @@ namespace dxvk {
       pushConstRange.size,
       &m_state.pc.data[pushConstRange.offset]);
   }
-  
+
+bool DxvkContext::checkAsyncCompilationCompat() {
+    bool fbCompat = true;
+    for (uint32_t i = 0; fbCompat && i < m_state.om.framebufferInfo.numAttachments(); i++) {
+      const auto& attachment = m_state.om.framebufferInfo.getAttachment(i);
+      fbCompat &= attachment.view->getRtBindingAsyncCompilationCompat();
+    }
+    return fbCompat;
+  }  
 
   template<bool Resolve>
   bool DxvkContext::commitComputeState() {
