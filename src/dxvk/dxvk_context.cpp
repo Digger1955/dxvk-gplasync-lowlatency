@@ -6625,7 +6625,7 @@ namespace dxvk {
   }
 
 
-  void DxvkContext::updateFramebuffer() {
+  void DxvkContext::updateFramebuffer(bool isDraw) {
     if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
       m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
 
