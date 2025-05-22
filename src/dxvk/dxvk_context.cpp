@@ -6217,7 +6217,8 @@ namespace dxvk {
       : DxvkContextFlag::GpDirtyRasterizerState);
 
     // Retrieve and bind actual Vulkan pipeline handle
-    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state);
+    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(
+      m_state.gp.state, this->checkAsyncCompilationCompat());
 
     if (unlikely(!pipelineInfo.handle))
       return false;
