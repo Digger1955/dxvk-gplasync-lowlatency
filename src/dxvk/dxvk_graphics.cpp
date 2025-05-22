@@ -1068,11 +1068,22 @@ namespace dxvk {
       if (!this->validatePipelineState(state, true))
         return DxvkGraphicsPipelineHandle();
 
-      // Prevent other threads from adding new instances and check again
-      std::unique_lock<dxvk::mutex> lock(m_mutex);
-      instance = this->findInstance(state);
+    bool useAsync = m_device->config().enableAsync && async;
 
-      if (!instance) {
+    // Prevent other threads from adding new instances and check again
+    std::unique_lock<dxvk::mutex> lock(useAsync ? m_asyncMutex : m_mutex);
+    instance = this->findInstance(state);
+
+    if (!instance) {
+      if (useAsync) {
+        m_async = true;
+        lock.unlock();
+
+        m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::High);
+
+        return DxvkGraphicsPipelineHandle();
+      } else {
+
         // Keep pipeline object locked, at worst we're going to stall
         // a state cache worker and the current thread needs priority.
         bool canCreateBasePipeline = this->canCreateBasePipeline(state);
@@ -1092,6 +1103,7 @@ namespace dxvk {
           this->writePipelineStateToCache(state);
       }
     }
+  }
 
     return instance->getHandle();
   }
