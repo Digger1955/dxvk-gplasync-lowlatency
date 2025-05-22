@@ -6649,6 +6649,11 @@ namespace dxvk {
         m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
       }
 
+      if (isDraw) {
+        for (uint32_t i = 0; i < fbInfo.numAttachments(); i++)
+          fbInfo.getAttachment(i).view->setRtBindingFrameId(m_device->getCurrentFrameId());
+      }
+      
       m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
     } else if (m_flags.test(DxvkContextFlag::GpRenderPassNeedsFlush)) {
       // End render pass to flush pending resolves
