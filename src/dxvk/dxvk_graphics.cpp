@@ -1124,7 +1124,7 @@ namespace dxvk {
 
       // Do not compile if this pipeline can be fast linked. This essentially
       // disables the state cache for pipelines that do not benefit from it.
-      if (this->canCreateBasePipeline(state))
+      if (!gplAsyncCache && !m_async && this->canCreateBasePipeline(state))
         return;
 
       // Prevent other threads from adding new instances and check again
