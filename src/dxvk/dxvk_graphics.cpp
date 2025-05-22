@@ -1145,8 +1145,14 @@ namespace dxvk {
     instance->fastHandle.store(pipeline, std::memory_order_release);
 
     // Log pipeline state on error
-    if (!pipeline)
+    if (!pipeline) {
       this->logPipelineState(LogLevel::Error, state);
+      return;
+    }
+
+    //Write pipeline to state cache
+    if (gplAsyncCache) {
+      this->writePipelineStateToCache(state);
   }
 
 
