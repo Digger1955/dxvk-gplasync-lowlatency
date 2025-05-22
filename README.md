@@ -162,15 +162,15 @@ Originally started as hacky solution for shader compilation stutter in dxvk. Sim
 
 Enabling this solution results in a lot less shader compilation stuttering by not blocking the main thread when compiling async pipelines and (not necessarily) miscellaneous graphical issues while shaders are compiling for the first time.
 
-Asynchronous pipeline compilation is enabled with `DXVK_ASYNC=1` environment variable and corresponds to `dxvk.enableAsync = True` in `dxvk.conf`. It is enabled by default.
+Asynchronous pipeline compilation is enabled with `DXVK_ASYNC=1` environment variable and is equivalent to `dxvk.enableAsync = True` in `dxvk.conf`. It is enabled by default.
 
-Asynchronous pipeline compilation is disabled with `DXVK_ASYNC=0` environment variable and corresponds to `dxvk.enableAsync = False` in `dxvk.conf`.
+Asynchronous pipeline compilation is disabled with `DXVK_ASYNC=0` environment variable and is equivalent to `dxvk.enableAsync = False` in `dxvk.conf`.
 
 ### GPLAsync and State cache
 
-State cache fixes for GPL and Async are enabled with `DXVK_GPLASYNCCACHE=1` environment variable and corresponds to `dxvk.gplAsyncCache = True` in `dxvk.conf`. It is enabled by default.
+State cache fixes for GPL and Async are enabled with `DXVK_GPLASYNCCACHE=1` environment variable and is equivalent to `dxvk.gplAsyncCache = True` in `dxvk.conf`. It is enabled by default.
 
-State cache fixes for GPL and Async are disabled with `DXVK_GPLASYNCCACHE=0` environment variable and corresponds to `dxvk.gplAsyncCache = False` in `dxvk.conf`.
+State cache fixes for GPL and Async are disabled with `DXVK_GPLASYNCCACHE=0` environment variable and is equivalent to `dxvk.gplAsyncCache = False` in `dxvk.conf`.
 
 ### Low Latency frame pacing
 
