@@ -4212,7 +4212,7 @@ namespace dxvk {
           VkExtent3D            extent,
           VkImageAspectFlags    aspect,
           VkClearValue          value) {
-    this->updateFramebuffer();
+    this->updateFramebuffer(true);
 
     VkPipelineStageFlags clearStages = 0;
     VkAccessFlags clearAccess = 0;
