@@ -28,7 +28,9 @@ compiler_args = [
   '-Wno-missing-braces',
 ]
 
-link_args = []
+link_args = [
+  '-s',
+]
 
 if get_option('build_id')
   link_args += [
@@ -95,11 +97,11 @@ if platform == 'windows'
     # setup file alignment + enable PDB output for MSVC builds
     # PDBs are useful for Windows consumers of DXVK 
     compiler_args += [
-      '/Z7'
+      '/arch:SSE2'
     ]
     link_args += [
       '/FILEALIGN:4096',
-      '/DEBUG:FULL'
+      '/DEBUG:NONE'
     ]
   endif
 

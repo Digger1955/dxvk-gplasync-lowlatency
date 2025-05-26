@@ -105,7 +105,7 @@ namespace dxvk::hud {
           HudRenderer&        renderer,
           HudPos              position) {
     position.y += 16;
-    renderer.drawText(16, position, 0xffffffffu, "DXVK " DXVK_VERSION);
+    renderer.drawText(16, position, 0xffffffffu, "DXVK-GPLALL " DXVK_VERSION);
 
     position.y += 8;
     return position;
@@ -140,18 +140,18 @@ namespace dxvk::hud {
 
 
   HudDeviceInfoItem::HudDeviceInfoItem(const Rc<DxvkDevice>& device) {
-    const auto& props = device->properties();
+    VkPhysicalDeviceProperties props = device->adapter()->deviceProperties();
 
-    std::string driverInfo = props.vk12.driverInfo;
-
-    if (driverInfo.empty())
-      driverInfo = props.driverVersion.toString();
-
-    m_deviceName = props.core.properties.deviceName;
-    m_driverName = str::format("Driver:  ", props.vk12.driverName);
-    m_driverVer = str::format("Version: ", driverInfo);
+    m_deviceName = props.deviceName;
+    m_vulkanVer = str::format("VLK: ",
+      VK_VERSION_MAJOR(props.apiVersion), ".",
+      VK_VERSION_MINOR(props.apiVersion), ".",
+      VK_VERSION_PATCH(props.apiVersion));
+    m_driverVer = str::format("VLK Drv: ",
+      VK_VERSION_MAJOR(props.driverVersion), ".",
+      VK_VERSION_MINOR(props.driverVersion), ".",
+      VK_VERSION_PATCH(props.driverVersion));
   }
-
 
   HudDeviceInfoItem::~HudDeviceInfoItem() {
 
@@ -168,11 +168,11 @@ namespace dxvk::hud {
     renderer.drawText(16, position, 0xffffffffu, m_deviceName);
     
     position.y += 24;
-    renderer.drawText(16, position, 0xffffffffu, m_driverName);
+    renderer.drawText(16, position, 0xffffffffu, m_vulkanVer);
     
     position.y += 20;
     renderer.drawText(16, position, 0xffffffffu, m_driverVer);
-
+    
     position.y += 8;
     return position;
   }

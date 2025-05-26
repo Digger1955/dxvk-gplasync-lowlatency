@@ -1,18 +1,21 @@
-# DXVK GPLAsync-LowLatency
+# DXVK GPLAsync-LowLatency (DXVK-GPLALL)
 
 A Vulkan-based translation layer for Direct3D 8/9/10/11 which allows running 3D applications on: 
 
-1. Windows 10/11, if GPU has Vulkan driver that is Vulkan 1.3 compliant.
-2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant.
-3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant.
+1. Windows 10/11, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
+2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE3 CPU.
+3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE3 CPU.
 
-## Changes compared to upstream [DXVK](https://github.com/doitsujin/dxvk)
+## Major changes compared to [upstream DXVK](https://github.com/doitsujin/dxvk)
 
 1. Implemented Low Latency frame pacing mode that aims to greatly reduce latency with minimal impact in fps. Author - [netborg-afps](https://github.com/netborg-afps/dxvk/releases)
 2. Implemented Asynchronous pipeline compilation (Async) that aims to greatly reduce shader compilation stutter by not blocking the main thread when compiling async pipelines. Authors - [jomihaka](https://github.com/jomihaka/dxvk-poe-hack) and [Sporif](https://github.com/Sporif/dxvk-async)
 3. Implemented the ability to use both (together or separately) Graphics Pipeline Library (GPL) and Asynchronous pipeline compilation (Async) on DXVK 2.1 and later. Author - [Ph42oN](https://gitlab.com/Ph42oN/dxvk-gplasync/)
-4. Implemented default location for global DXVK configuration file (dxvk.conf) on Windows, Linux and MacOS. Author - [Ph42oN](https://gitlab.com/Ph42oN/dxvk-gplasync/)
-5. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+4. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+5. Providing Windows (MSVC) builds of DXVK-GPLALL. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+6. Providing AVX2 (x86-64-v3) optimized builds of DXVK-GPLALL. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+
+Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog).
 
 ## How to use (Windows 10/11)
 
@@ -48,7 +51,7 @@ Tools such as Steam Play, Lutris, Bottles, Heroic Launcher, etc will automatical
 
 **Important**: It is STRONGLY RECOMMENDED to create dxvk.conf at application's main executable folder (per-application configuration file - first priority) or at /home/$USER/.config/dxvk.conf (one global configuration file - second priority) with your desired DXVK settings.
 
-### DLL dependencies 
+## DLL dependencies 
 Listed below are the DLL requirements for using DXVK with any single API.
 
 - d3d8: `d3d8.dll` and `d3d9.dll`
@@ -56,15 +59,15 @@ Listed below are the DLL requirements for using DXVK with any single API.
 - d3d10: `d3d10core.dll`, `d3d11.dll` and `dxgi.dll`
 - d3d11: `d3d11.dll` and `dxgi.dll`
 
-### Notes on Vulkan drivers
+## Notes on Vulkan drivers
 Before reporting an issue, please check the [Wiki](https://github.com/doitsujin/dxvk/wiki/Driver-support) page on the current driver status and make sure you run a recent enough driver version for your hardware.
 
-### Online multiplayer games
+## Online multiplayer games
 Manipulation of Direct3D libraries in multiplayer games may be considered cheating and can get your account **banned**. This may also apply to singleplayer games with an embedded or dedicated multiplayer portion. 
 
 Async could theoretically trigger client-side anti-cheats, and as such, may be risky to use inside of multiplayer games. There is no information about someone getting banned for using DXVK or DXVK with Async, but - **Use at your own risk.**
 
-### `dxvk.conf` Config File Location
+## `dxvk.conf` Config File Location
 
 By default, DXVK has [built-in configs](https://github.com/doitsujin/dxvk/blob/master/src/util/config/config.cpp) for specific games and GPU drivers. If user needs to change default DXVK settings, then it can be done by changing default settings in `dxvk.conf` configuration file or by using `DXVK_CONFIG` environment variable.
 
@@ -80,9 +83,9 @@ User can create `DXVK_CONFIG` to set config variables through the environment in
 
 - Example: `DXVK_CONFIG="dxgi.hideAmdGpu = True; dxgi.syncInterval = 0"`
 
-### HUD
+## HUD
 The `DXVK_HUD` environment variable controls a HUD which can display the framerate and some stat counters. It accepts a comma-separated list of the following options:
-- `devinfo`: Displays the name of the GPU and the driver version.
+- `devinfo`: Displays the name of the GPU, Vulkan Headers version and Vulkan Driver version.
 - `fps`: Shows the current frame rate.
 - `frametimes`: Shows a frame time graph.
 - `submissions`: Shows the number of command buffers submitted per frame.
@@ -105,12 +108,12 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 
 Additionally, `DXVK_HUD=1` has the same effect as `DXVK_HUD=devinfo,fps`, and `DXVK_HUD=full` enables all available HUD elements.
 
-### Logs
+## Logs
 When used with Wine, DXVK will print log messages to `stderr`. Additionally, standalone log files can optionally be generated by setting the `DXVK_LOG_PATH` variable, where log files in the given directory will be called `app_d3d11.log`, `app_dxgi.log` etc., where `app` is the name of the game executable.
 
 On Windows, log files will be created in the game's working directory by default, which is usually next to the game executable.
 
-### Frame rate limit
+## Frame rate limit
 The `DXVK_FRAME_RATE` environment variable can be used to limit the frame rate. 
 
 A value of `0` limits the frame rate to the selected display refresh rate when vertical synchronization is enabled if the actual display mode does not match the game's one. 
@@ -123,20 +126,20 @@ A value of `-1` always disables the limiter.
 - For D3D8 and D3D9 - `d3d9.maxFrameRate`. Default value is `d3d9.maxFrameRate = 0`
 - For D3D10 and D3D11 - `dxgi.maxFrameRate` . Default value is `dxgi.maxFrameRate = 0`
 
-### Device filter
+## Device filter
 Some applications do not provide a method to select a different GPU. In that case, DXVK can be forced to use a given device:
 - `DXVK_FILTER_DEVICE_NAME="Device Name"` Selects devices with a matching Vulkan device name, which can be retrieved with tools such as `vulkaninfo`. Matches on substrings, so "VEGA" or "AMD RADV VEGA10" is supported if the full device name is "AMD RADV VEGA10 (LLVM 9.0.0)", for example. If the substring matches more than one device, the first device matched will be used.
 
 **Note:** If the device filter is configured incorrectly, it may filter out all devices and applications will be unable to create a D3D device.
 
-### Debugging
+## Debugging
 The following environment variables can be used for **debugging** purposes.
 - `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation` Enables Vulkan debug layers. Highly recommended for troubleshooting rendering issues and driver crashes. Requires the Vulkan SDK to be installed on the host system.
 - `DXVK_LOG_LEVEL=none|error|warn|info|debug` Controls message logging.
 - `DXVK_LOG_PATH=/some/directory` Changes path where log files are stored. Set to `none` to disable log file creation entirely, without disabling logging.
 - `DXVK_DEBUG=markers|validation` Enables use of the `VK_EXT_debug_utils` extension for translating performance event markers, or to enable Vulkan validation, respecticely.
 
-### Graphics Pipeline Library (GPL)
+## Graphics Pipeline Library (GPL)
 On drivers which support `VK_EXT_graphics_pipeline_library` Vulkan shaders will be compiled at the time the game loads its D3D shaders, rather than at draw time. This reduces or eliminates shader compile stutter in many games when compared to the previous system.
 
 In games that load their shaders during loading screens or in the menu, this can lead to prolonged periods of very high CPU utilization, especially on weaker CPUs. For affected games it is recommended to wait for shader compilation to finish before starting the game to avoid stutter and low performance. Shader compiler activity can be monitored with `DXVK_HUD=compiler`.
@@ -145,7 +148,7 @@ In games that load their shaders during loading screens or in the menu, this can
 
 **Note:** Games which only load their D3D shaders at draw time (e.g. most Unreal Engine games) will still exhibit some stutter, although it should still be less severe than without this feature.
 
-### State cache
+## State cache
 DXVK caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
 
 State cache can be used together with GPL that is not possible on upstream DXVK, but it can be useful depending on game.
@@ -156,7 +159,7 @@ The following environment variables can be used to control the cache:
   - `reset`: Clears the cache file.
 - `DXVK_STATE_CACHE_PATH=/some/directory` Specifies a directory where to put the cache files. Defaults to the current working directory of the application.
 
-### Asynchronous pipeline compilation (Async)
+## Asynchronous pipeline compilation (Async)
 
 Originally started as hacky solution for shader compilation stutter in dxvk. Similar solution was later added to dxvk itself and promptly removed.
 
@@ -166,13 +169,13 @@ Asynchronous pipeline compilation is enabled with `DXVK_ASYNC=1` environment var
 
 Asynchronous pipeline compilation is disabled with `DXVK_ASYNC=0` environment variable and is equivalent to `dxvk.enableAsync = False` in `dxvk.conf`.
 
-### GPLAsync and State cache
+## GPLAsync and State cache
 
 State cache fixes for GPL and Async are enabled with `DXVK_GPLASYNCCACHE=1` environment variable and is equivalent to `dxvk.gplAsyncCache = True` in `dxvk.conf`. It is enabled by default.
 
 State cache fixes for GPL and Async are disabled with `DXVK_GPLASYNCCACHE=0` environment variable and is equivalent to `dxvk.gplAsyncCache = False` in `dxvk.conf`.
 
-### Low Latency frame pacing
+## Low Latency frame pacing
 
 Low-Latency frame pacing mode aims to reduce latency with minimal impact in fps. Effective when operating in the GPU-limit. Efficient to be used in the CPU-limit as well.
 
@@ -184,7 +187,7 @@ An interesting observation while playtesting was that not only the input lag was
 
 Optimized for Variable Refresh Rate (VRR) displays, VK_PRESENT_MODE_IMMEDIATE_KHR (V-Sync Off) and VK_PRESENT_MODE_FIFO_KHR (V-Sync On). It also comes with its own fps-limiter which is typically used to prevent the game's fps exceeding the monitor's refresh rate.
 
-#### Usage
+### Usage
 
 `DXVK_FRAME_PACE` environment variable has the next options: `max-frame-latency`, `low-latency` and `min-latency`. Default is `DXVK_FRAME_PACE=low-latency`.
 
@@ -259,7 +262,7 @@ does have `--enable-threads=posix` enabled during configure. If your distro does
 ship its mingw-w64-gcc binary with `--enable-threads=win32` you might have to
 recompile locally or open a bug at your distro's bugtracker to ask for it. 
 
-# DXVK Native
+## DXVK Native
 
 DXVK Native is a version of DXVK which allows it to be used natively without Wine.
 
