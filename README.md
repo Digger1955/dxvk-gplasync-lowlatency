@@ -148,6 +148,8 @@ In games that load their shaders during loading screens or in the menu, this can
 
 **Note:** Games which only load their D3D shaders at draw time (e.g. most Unreal Engine games) will still exhibit some stutter, although it should still be less severe than without this feature.
 
+**IMPORTANT**: Disabled by default since 2.6.1-4. Reasons have been specified in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#dxvkenablegraphicspipelinelibrary)
+
 ## State cache
 DXVK caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
 
