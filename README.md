@@ -3,8 +3,8 @@
 A Vulkan-based translation layer for Direct3D 8/9/10/11 which allows running 3D applications on: 
 
 1. Windows 10/11, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
-2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE3 CPU.
-3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE3 CPU.
+2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
+3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
 
 ## Major changes compared to [upstream DXVK](https://github.com/doitsujin/dxvk)
 
@@ -23,7 +23,7 @@ Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasyn
 2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency/blob/test/README.md#dll-dependencies) to the location of application's main executable folder.
 3. Run application.
 
-**Important**: It is STRONGLY RECOMMENDED to create dxvk.conf at application's main executable folder (per-application configuration file - first priority) or at %APPDATA%/dxvk.conf (one global configuration file - second priority) with your desired DXVK settings.
+**Important**: It is STRONGLY RECOMMENDED to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
 
 ## How to use (Linux/MacOS)
 In order to install a DXVK package obtained from the [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page into a given wine prefix, copy or symlink the DLLs into the following directories as follows, then open `winecfg` and manually add `native` DLL overrides for `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` under the Libraries tab.
@@ -49,7 +49,7 @@ In order to remove DXVK from a prefix, remove the DLLs and DLL overrides, and ru
 
 Tools such as Steam Play, Lutris, Bottles, Heroic Launcher, etc will automatically handle setup of dxvk on their own when enabled.
 
-**Important**: It is STRONGLY RECOMMENDED to create dxvk.conf at application's main executable folder (per-application configuration file - first priority) or at /home/$USER/.config/dxvk.conf (one global configuration file - second priority) with your desired DXVK settings.
+**Important**: It is STRONGLY RECOMMENDED to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `/home/$USER/.config/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
 
 ## DLL dependencies 
 Listed below are the DLL requirements for using DXVK with any single API.
