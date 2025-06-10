@@ -10,9 +10,8 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
-  '-msse',
-  '-msse2',
-  '-msse3',
+  '-march=x86-64',
+  '-mtune=x86-64',
   '-mfpmath=sse',
   '-Wimplicit-fallthrough',
   # gcc
@@ -29,7 +28,7 @@ compiler_args = [
 ]
 
 link_args = [
-  '-s',
+  '-Wl,--s',
 ]
 
 if get_option('build_id')
@@ -94,11 +93,11 @@ if platform == 'windows'
       ]
     endif
   else
-    # setup file alignment + enable PDB output for MSVC builds
-    # PDBs are useful for Windows consumers of DXVK 
+    # Windows (MSVC) Compiler Options
     compiler_args += [
       '/arch:SSE2'
     ]
+    # MSVC Linker Options
     link_args += [
       '/FILEALIGN:4096',
       '/DEBUG:NONE'
