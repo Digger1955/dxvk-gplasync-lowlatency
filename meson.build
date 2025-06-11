@@ -10,6 +10,7 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
+  '-pipe',
   '-march=x86-64',
   '-mtune=x86-64',
   '-mfpmath=sse',
