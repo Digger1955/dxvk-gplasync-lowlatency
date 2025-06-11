@@ -11,8 +11,8 @@ dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
   '-pipe',
-  '-march=x86-64',
-  '-mtune=x86-64',
+  '-march=x86-64-v3',
+  '-mtune=x86-64-v3',
   '-mfpmath=sse',
   '-Wimplicit-fallthrough',
   # gcc
@@ -96,11 +96,17 @@ if platform == 'windows'
   else
     # Windows (MSVC) Compiler Options
     compiler_args += [
-      '/arch:SSE2'
+      '/arch:AVX2',
+      '/O2',
+      '/GL',
+      '/Gw'
     ]
     # MSVC Linker Options
     link_args += [
       '/FILEALIGN:4096',
+      '/INCREMENTAL:NO',
+      '/OPT:REF,ICF',
+      '/LTCG',
       '/DEBUG:NONE'
     ]
   endif
@@ -201,7 +207,7 @@ glsl_generator = generator(
 )
 
 dxvk_version = vcs_tag(
-  command: ['git', 'describe', '--dirty=-GPLAsync-LowLatency'],
+  command: ['git', 'describe', '--dirty=--GPLALL-x86-64-v3-optimized'],
   input:  'version.h.in',
   output: 'version.h',
 )
@@ -220,4 +226,4 @@ if platform != 'windows'
   subdir('include/native')
 endif
 
-subdir('src')
+subdir('src') 
