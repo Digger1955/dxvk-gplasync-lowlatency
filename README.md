@@ -6,14 +6,22 @@ A Vulkan-based translation layer for Direct3D 8/9/10/11 which allows running 3D 
 2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
 3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
 
+For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). It supports Windows 7/8/10/11, Linux/Mac, requires SSE2 CPU, GPU with Vulkan driver that is Vulkan 1.1 compliant. It has implemented Direct3D 8/9/10/11 and a build with Asynchronous pipeline compilation (Async).
+
 ## Major changes compared to [upstream DXVK](https://github.com/doitsujin/dxvk)
 
 1. Implemented Low Latency frame pacing mode that aims to greatly reduce latency with minimal impact in fps. Author - [netborg-afps](https://github.com/netborg-afps/dxvk/releases)
 2. Implemented Asynchronous pipeline compilation (Async) that aims to greatly reduce shader compilation stutter by not blocking the main thread when compiling async pipelines. Authors - [jomihaka](https://github.com/jomihaka/dxvk-poe-hack) and [Sporif](https://github.com/Sporif/dxvk-async)
 3. Implemented the ability to use both (together or separately) Graphics Pipeline Library (GPL) and Asynchronous pipeline compilation (Async) on DXVK 2.1 and later. Author - [Ph42oN](https://gitlab.com/Ph42oN/dxvk-gplasync/)
 4. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
-5. Providing Windows (MSVC) builds of DXVK-GPLALL. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
-6. Providing AVX2 (x86-64-v3) optimized builds of DXVK-GPLALL. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+5. Provided various GCC (for any OS) builds of DXVK-GPLALL:
+   a) optimized for `SSE2 (-march=x86-64, -mtune=x86-64)` and newer CPUs;
+   b) optimized for `AVX2 (-march=x86-64-v3, -mtune=x86-64-v3)` and newer CPUs.
+Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+6. Provided various MSVC (only for Windows, requires [MSVCRT](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)) builds of DXVK-GPLALL:
+   a) optimized for `SSE2 (/arch:SSE2)` and newer CPUs;
+   b) optimized for `AVX2 (/arch:AVX2)` and newer CPUs with Link-Time Optimization (`LTO`, a.k.a `/LTCG`) and `/O2` optimization level.
+Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
 Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog).
 
