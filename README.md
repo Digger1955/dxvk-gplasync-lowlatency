@@ -3,8 +3,10 @@
 A Vulkan-based translation layer for Direct3D 8/9/10/11 which allows running 3D applications on: 
 
 1. Windows 10/11, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
-2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE3 CPU.
-3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE3 CPU.
+2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
+3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
+
+For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). It supports Windows 7/8/10/11, Linux/Mac, requires SSE2 CPU, GPU with Vulkan driver that is Vulkan 1.1 compliant. It has implemented Direct3D 8/9/10/11 and a build with Asynchronous pipeline compilation (Async).
 
 ## Major changes compared to [upstream DXVK](https://github.com/doitsujin/dxvk)
 
@@ -12,8 +14,14 @@ A Vulkan-based translation layer for Direct3D 8/9/10/11 which allows running 3D 
 2. Implemented Asynchronous pipeline compilation (Async) that aims to greatly reduce shader compilation stutter by not blocking the main thread when compiling async pipelines. Authors - [jomihaka](https://github.com/jomihaka/dxvk-poe-hack) and [Sporif](https://github.com/Sporif/dxvk-async)
 3. Implemented the ability to use both (together or separately) Graphics Pipeline Library (GPL) and Asynchronous pipeline compilation (Async) on DXVK 2.1 and later. Author - [Ph42oN](https://gitlab.com/Ph42oN/dxvk-gplasync/)
 4. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
-5. Providing Windows (MSVC) builds of DXVK-GPLALL. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
-6. Providing AVX2 (x86-64-v3) optimized builds of DXVK-GPLALL. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+5. Provided various GCC (for any OS) builds of DXVK-GPLALL:
+   a) optimized for `SSE2 (-march=x86-64, -mtune=x86-64)` and newer CPUs;
+   b) optimized for `AVX2 (-march=x86-64-v3, -mtune=x86-64-v3)` and newer CPUs.
+Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+6. Provided various MSVC (only for Windows, requires [MSVCRT](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)) builds of DXVK-GPLALL:
+   a) optimized for `SSE2 (/arch:SSE2)` and newer CPUs;
+   b) optimized for `AVX2 (/arch:AVX2)` and newer CPUs with Link-Time Optimization (`LTO`, a.k.a `/LTCG`) and `/O2` optimization level.
+Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
 Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog).
 
@@ -23,7 +31,7 @@ Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasyn
 2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency/blob/test/README.md#dll-dependencies) to the location of application's main executable folder.
 3. Run application.
 
-**Important**: It is STRONGLY RECOMMENDED to create dxvk.conf at application's main executable folder (per-application configuration file - first priority) or at %APPDATA%/dxvk.conf (one global configuration file - second priority) with your desired DXVK settings.
+**Important**: It is STRONGLY RECOMMENDED to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
 
 ## How to use (Linux/MacOS)
 In order to install a DXVK package obtained from the [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page into a given wine prefix, copy or symlink the DLLs into the following directories as follows, then open `winecfg` and manually add `native` DLL overrides for `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` under the Libraries tab.
@@ -49,7 +57,7 @@ In order to remove DXVK from a prefix, remove the DLLs and DLL overrides, and ru
 
 Tools such as Steam Play, Lutris, Bottles, Heroic Launcher, etc will automatically handle setup of dxvk on their own when enabled.
 
-**Important**: It is STRONGLY RECOMMENDED to create dxvk.conf at application's main executable folder (per-application configuration file - first priority) or at /home/$USER/.config/dxvk.conf (one global configuration file - second priority) with your desired DXVK settings.
+**Important**: It is STRONGLY RECOMMENDED to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `/home/$USER/.config/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
 
 ## DLL dependencies 
 Listed below are the DLL requirements for using DXVK with any single API.
@@ -147,6 +155,8 @@ In games that load their shaders during loading screens or in the menu, this can
 **Important**: Usage of Graphics Pipeline Library significantly increases VRAM usage, due to this if you are low on VRAM, it can be better to disable it. That can be done with option `dxvk.enableGraphicsPipelineLibrary = False` in `dxvk.conf`.
 
 **Note:** Games which only load their D3D shaders at draw time (e.g. most Unreal Engine games) will still exhibit some stutter, although it should still be less severe than without this feature.
+
+**IMPORTANT**: Disabled by default since 2.6.1-4. Reasons have been specified in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#dxvkenablegraphicspipelinelibrary)
 
 ## State cache
 DXVK caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.

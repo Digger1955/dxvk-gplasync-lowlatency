@@ -23,7 +23,7 @@ namespace dxvk {
     int32_t numCompilerThreads = 0;
 
     /// Enable graphics pipeline library
-    Tristate enableGraphicsPipelineLibrary = Tristate::Auto;
+    Tristate enableGraphicsPipelineLibrary = Tristate::False;
 
     /// Enables pipeline lifetime tracking
     Tristate trackPipelineLifetime = Tristate::Auto;
