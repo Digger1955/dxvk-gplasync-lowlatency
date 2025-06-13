@@ -100,7 +100,6 @@ if platform == 'windows'
       '/favor:AMD64',
       '/d2vzeroupper',
       '/O2',
-      '/fp:fast',
       '/Ob3',
       '/GL',
       '/Gw',
