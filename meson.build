@@ -96,7 +96,7 @@ if platform == 'windows'
   else
     # Windows (MSVC) Compiler Options
     compiler_args += [
-      '/arch:SSE2'
+      '/arch:SSE2',
       '/O2',
       '/Ob3',
       '/GL',
