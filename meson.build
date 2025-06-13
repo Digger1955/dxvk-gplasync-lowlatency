@@ -97,10 +97,17 @@ if platform == 'windows'
     # Windows (MSVC) Compiler Options
     compiler_args += [
       '/arch:SSE2'
+      '/O2',
+      '/Ob3',
+      '/GL',
+      '/Gw'
     ]
     # MSVC Linker Options
     link_args += [
       '/FILEALIGN:4096',
+      '/INCREMENTAL:NO',
+      '/OPT:REF,ICF',
+      '/LTCG',
       '/DEBUG:NONE'
     ]
   endif
@@ -201,7 +208,7 @@ glsl_generator = generator(
 )
 
 dxvk_version = vcs_tag(
-  command: ['git', 'describe', '--dirty=-GPLAsync-LowLatency'],
+  command: ['git', 'describe', '--dirty=-GPLALL'],
   input:  'version.h.in',
   output: 'version.h',
 )
