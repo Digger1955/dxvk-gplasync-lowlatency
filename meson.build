@@ -104,7 +104,6 @@ if platform == 'windows'
       '/Ob3',
       '/GL',
       '/Gw',
-      '/Gv',
       '/Qpar',
       '/Qvec-report:2'
     ]
@@ -214,7 +213,7 @@ glsl_generator = generator(
 )
 
 dxvk_version = vcs_tag(
-  command: ['git', 'describe', '--dirty=--GPLALL-AVX2'],
+  command: ['git', 'describe', '--dirty=--GPLALL-x86-64-v3-optimized'],
   input:  'version.h.in',
   output: 'version.h',
 )
