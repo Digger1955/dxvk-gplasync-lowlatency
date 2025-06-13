@@ -97,9 +97,16 @@ if platform == 'windows'
     # Windows (MSVC) Compiler Options
     compiler_args += [
       '/arch:AVX2',
+      '/favor:AMD64',
+      '/d2vzeroupper',
       '/O2',
+      '/fp:fast',
+      '/Ob3',
       '/GL',
-      '/Gw'
+      '/Gw',
+      '/Gv',
+      '/Qpar',
+      '/Qvec-report:2'
     ]
     # MSVC Linker Options
     link_args += [
@@ -207,7 +214,7 @@ glsl_generator = generator(
 )
 
 dxvk_version = vcs_tag(
-  command: ['git', 'describe', '--dirty=--GPLALL-x86-64-v3-optimized'],
+  command: ['git', 'describe', '--dirty=--GPLALL-AVX2'],
   input:  'version.h.in',
   output: 'version.h',
 )
