@@ -97,8 +97,7 @@ if platform == 'windows'
     # Windows (MSVC) Compiler Options
     compiler_args += [
       '/arch:AVX2',
-      '/favor:AMD64',
-      '/d2vzeroupper',
+      '/favor:INTEL64',
       '/O2',
       '/Ob3',
       '/GL',
