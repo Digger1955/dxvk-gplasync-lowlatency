@@ -104,6 +104,7 @@ if platform == 'windows'
       '/GL',
       '/Gw',
       '/Qpar',
+      '/Qpar-report:2',
       '/Qvec-report:2'
     ]
     # MSVC Linker Options
@@ -212,7 +213,7 @@ glsl_generator = generator(
 )
 
 dxvk_version = vcs_tag(
-  command: ['git', 'describe', '--dirty=--GPLALL-x86-64-v3-optimized'],
+  command: ['git', 'describe', '--dirty=--GPLALL-AVX2'],
   input:  'version.h.in',
   output: 'version.h',
 )
