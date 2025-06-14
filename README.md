@@ -15,12 +15,21 @@ For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use 
 3. Implemented the ability to use both (together or separately) Graphics Pipeline Library (GPL) and Asynchronous pipeline compilation (Async) on DXVK 2.1 and later. Author - [Ph42oN](https://gitlab.com/Ph42oN/dxvk-gplasync/)
 4. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 5. Provided various GCC (for any OS) builds of DXVK-GPLALL:
-   a) optimized for `SSE2 (-march=x86-64, -mtune=x86-64)` and newer CPUs;
-   b) optimized for `AVX2 (-march=x86-64-v3, -mtune=x86-64-v3)` and newer CPUs.
+
+   a) optimized for `SSE2` (`-march=x86-64, -mtune=x86-64`) and newer CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto`) and `-O3` optimization level;
+
+   b) optimized for `SSE4.2` (`-march=x86-64-v2, -mtune=x86-64-v2`) and newer CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto`) and `-O3` optimization level.
+
 Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+
 6. Provided various MSVC (only for Windows, requires [MSVCRT](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)) builds of DXVK-GPLALL:
-   a) optimized for `SSE2 (/arch:SSE2)` and newer CPUs;
-   b) optimized for `AVX2 (/arch:AVX2)` and newer CPUs with Link-Time Optimization (`LTO`, a.k.a `/LTCG`) and `/O2` optimization level.
+
+   a) optimized for `SSE2` (`/arch:SSE2`) and newer CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level;
+
+   b) optimized for `SSE4.2` (`/arch:SSE4.2`) and newer Intel (`/favor:INTEL64` a.k.a. `/favor:EM64T`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level;
+
+   c) optimized for `AVX2` (`/arch:AVX2`) and newer AMD (`/favor:AMD64`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level.
+
 Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
 Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog).
@@ -195,7 +204,7 @@ Latency has been decreased dramatically in some games by speeding up the dxvk-in
 
 An interesting observation while playtesting was that not only the input lag was affected, but the video generated did progress more cleanly in time as well with regards to the wow and flutter effect.
 
-Optimized for Variable Refresh Rate (VRR) displays, VK_PRESENT_MODE_IMMEDIATE_KHR (V-Sync Off) and VK_PRESENT_MODE_FIFO_KHR (V-Sync On). It also comes with its own fps-limiter which is typically used to prevent the game's fps exceeding the monitor's refresh rate.
+Optimized for Variable Refresh Rate (VRR) displays, `VK_PRESENT_MODE_IMMEDIATE_KHR` (V-Sync Off) and `VK_PRESENT_MODE_FIFO_KHR` (V-Sync On). It also comes with its own fps-limiter which is typically used to prevent the game's fps exceeding the monitor's refresh rate.
 
 ### Usage
 
