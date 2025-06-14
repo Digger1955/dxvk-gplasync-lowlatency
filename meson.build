@@ -10,10 +10,14 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
+  '-O3',
   '-pipe',
-  '-march=x86-64-v3',
-  '-mtune=x86-64-v3',
+  '-march=x86-64-v2',
+  '-mtune=x86-64-v2',
   '-mfpmath=sse',
+  '-fno-semantic-interposition',
+  '-flto',
+  '-fuse-linker-plugin',
   '-Wimplicit-fallthrough',
   # gcc
   '-Wno-missing-field-initializers',
@@ -96,7 +100,7 @@ if platform == 'windows'
   else
     # Windows (MSVC) Compiler Options
     compiler_args += [
-      '/arch:AVX2',
+      '/arch:SSE4.2',
       '/favor:INTEL64',
       '/O2',
       '/Ob3',
