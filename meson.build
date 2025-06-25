@@ -14,6 +14,8 @@ compiler_args = [
   '-pipe',
   '-march=x86-64',
   '-mtune=x86-64',
+  '-msse',
+  '-msse2',
   '-mfpmath=sse',
   '-fno-semantic-interposition',
   '-flto',
@@ -96,7 +98,6 @@ if platform == 'windows'
       # which prevents use of SSE
       # Fix stack alignment issues with mingw on 32-bit
       compiler_args += [
-        '-fno-lto',
         '-mpreferred-stack-boundary=2'
       ]
     endif
