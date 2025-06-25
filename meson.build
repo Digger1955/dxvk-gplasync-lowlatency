@@ -18,7 +18,7 @@ compiler_args = [
   '-msse2',
   '-mfpmath=sse',
   '-fno-semantic-interposition',
-  '-flto',
+  '-flto=auto',
   '-fuse-linker-plugin',
   '-Wimplicit-fallthrough',
   # gcc
