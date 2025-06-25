@@ -13,7 +13,7 @@ compiler_args = [
   '-O3',
   '-pipe',
   '-march=x86-64-v2',
-  '-mtune=x86-64-v2',
+  '-mtune=intel',
   '-mfpmath=sse',
   '-fno-semantic-interposition',
   '-flto',
