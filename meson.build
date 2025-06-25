@@ -95,6 +95,7 @@ if platform == 'windows'
       # Fix stack alignment issues with mingw on 32-bit
       compiler_args += [
         '-mpreferred-stack-boundary=2'
+        '-fno-lto'
       ]
     endif
   else
