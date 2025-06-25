@@ -92,6 +92,8 @@ if platform == 'windows'
         '-Wl,--enable-stdcall-fixup',
         '-Wl,--kill-at',
       ]
+      # Disable LTO on 32-bit due to GCC bug,
+      # which prevents use of SSE
       # Fix stack alignment issues with mingw on 32-bit
       compiler_args += [
         '-fno-lto',
