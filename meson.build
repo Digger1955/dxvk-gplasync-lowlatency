@@ -10,10 +10,16 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
+  '-O3',
   '-pipe',
-  '-march=x86-64-v3',
-  '-mtune=x86-64-v3',
+  '-march=x86-64-v2',
+  '-mtune=generic',
+  '-msse',
+  '-msse2',
   '-mfpmath=sse',
+  '-fno-semantic-interposition',
+  '-flto=auto',
+  '-fuse-linker-plugin',
   '-Wimplicit-fallthrough',
   # gcc
   '-Wno-missing-field-initializers',
