@@ -14,9 +14,11 @@ compiler_args = [
   '-pipe',
   '-march=x86-64',
   '-mtune=x86-64',
+  '-msse',
+  '-msse2',
   '-mfpmath=sse',
   '-fno-semantic-interposition',
-  '-flto',
+  '-flto=auto',
   '-fuse-linker-plugin',
   '-Wimplicit-fallthrough',
   # gcc
