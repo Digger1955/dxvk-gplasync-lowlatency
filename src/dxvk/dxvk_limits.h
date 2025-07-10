@@ -19,7 +19,7 @@ namespace dxvk {
     MaxNumSpecConstants         =    12,
     MaxUniformBufferSize        = 65536,
     MaxVertexBindingStride      =  2048,
-    MaxTotalPushDataSize        =   256,
+    MaxTotalPushDataSize        =   128,
     MaxSharedPushDataSize       =    64,
     MaxPerStagePushDataSize     =    32,
     MaxReservedPushDataSize     =    32,
