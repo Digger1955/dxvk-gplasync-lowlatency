@@ -81,10 +81,17 @@ namespace dxvk {
 
   void DxvkPipelineWorkers::startWorkers() {
     if (!std::exchange(m_workersRunning, true)) {
-      // Use all available cores by default
+      // Get number of CPU logical threads
       uint32_t workerCount = dxvk::thread::hardware_concurrency();
 
+      // Use (number of CPU logical threads - 2) pipeline workers.
+      // Less stuttering when compiling shaders while playing,
+      // in comparison to using all CPU logical threads.
+      workerCount = workerCount - 2;
+
+      // Catching systems with less than 4 threads
       if (workerCount <  1) workerCount =  1;
+      // Catching systems with more than 64 threads
       if (workerCount > 64) workerCount = 64;
 
       // Reduce worker count on 32-bit to save adderss space
