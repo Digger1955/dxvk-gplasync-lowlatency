@@ -3,6 +3,7 @@
 namespace dxvk {
 
   DxvkOptions::DxvkOptions(const Config& config) {
+    enableAsync           = config.getOption<bool>    ("dxvk.enableAsync",            true);
     enableDebugUtils      = config.getOption<bool>    ("dxvk.enableDebugUtils",       false);
     enableMemoryDefrag    = config.getOption<Tristate>("dxvk.enableMemoryDefrag",     Tristate::Auto);
     numCompilerThreads    = config.getOption<int32_t> ("dxvk.numCompilerThreads",     0);
