@@ -6075,7 +6075,8 @@ namespace dxvk {
                          DxvkContextFlag::GpDirtyDepthBias));
 
     // Retrieve and bind actual Vulkan pipeline handle
-    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state);
+    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state,
+      this->checkAsyncCompilationCompat());
 
     if (unlikely(!pipelineInfo.handle))
       return false;
@@ -6714,7 +6715,7 @@ namespace dxvk {
   }
 
 
-  void DxvkContext::updateRenderTargets() {
+  void DxvkContext::updateRenderTargets(bool isDraw) {
     if (m_flags.test(DxvkContextFlag::GpDirtyRenderTargets)) {
       m_flags.clr(DxvkContextFlag::GpDirtyRenderTargets);
 
@@ -6755,6 +6756,11 @@ namespace dxvk {
 
       m_state.om.framebufferInfo = std::move(fbInfo);
 
+      if (isDraw) {
+        for (uint32_t i = 0; i < fbInfo.numAttachments(); i++)
+          fbInfo.getAttachment(i).view->setRtBindingFrameId(m_device->getCurrentFrameId());
+      }
+
       m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
     } else if (m_flags.test(DxvkContextFlag::GpRenderPassNeedsFlush)) {
       // End render pass to flush pending resolves
@@ -6762,6 +6768,14 @@ namespace dxvk {
     }
   }
 
+  bool DxvkContext::checkAsyncCompilationCompat() const {
+    for (uint32_t i = 0; i < m_state.om.framebufferInfo.numAttachments(); i++) {
+      const auto& [view] = m_state.om.framebufferInfo.getAttachment(i);
+      if (!view->getRtBindingAsyncCompilationCompat())
+        return false;
+    }
+    return true;
+  }
 
   void DxvkContext::applyRenderTargetLoadLayouts() {
     for (uint32_t i = 0; i < MaxNumRenderTargets; i++)
@@ -7428,7 +7442,7 @@ namespace dxvk {
     // End render pass if there are pending resolves
     if (m_flags.any(DxvkContextFlag::GpDirtyRenderTargets,
                     DxvkContextFlag::GpRenderPassNeedsFlush))
-      this->updateRenderTargets();
+      this->updateRenderTargets(true);
 
     if (m_flags.test(DxvkContextFlag::GpXfbActive)) {
       // If transform feedback is active and there is a chance that we might
