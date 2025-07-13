@@ -1615,8 +1615,19 @@ namespace dxvk {
     // Open the file if it exists
     std::ifstream stream(str::topath(filePath.c_str()).c_str());
 
-    if (!stream && confLine.empty())
-      return config;
+    if (!stream && confLine.empty()) {
+      filePath = "/home/" + env::getEnvVar("USER") + "/.config/dxvk.conf";
+      stream.open(str::topath(filePath.c_str()).c_str());
+#ifdef _WIN32
+      if (!stream) {
+		    filePath = env::getEnvVar("APPDATA") + "/dxvk.conf";
+        stream.open(str::topath(filePath.c_str()).c_str());
+      }
+#endif
+
+		  if (!stream)
+			  return config;
+    }
 
     // Initialize parser context
     ConfigContext ctx;
