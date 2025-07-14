@@ -94,7 +94,7 @@
             },
             "properties": {
                 "VkPhysicalDeviceProperties": {
-                    "maxPushConstantsSize" : 128
+                    "maxPushConstantsSize" : 256
                 }
             }
         },
