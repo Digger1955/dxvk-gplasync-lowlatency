@@ -172,8 +172,8 @@ In games that load their shaders during loading screens or in the menu, this can
 
 **IMPORTANT**: Disabled by default since DXVK-GPLALL 2.6.1-4. Reasons have been specified in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#dxvkenablegraphicspipelinelibrary)
 
-## State cache (DXVK-GPLALL 2.6.1 only)
-DXVK-GPLALL up to version 2.6.1-6 caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
+## State cache (DXVK-GPLALL 2.6.x only)
+DXVK-GPLALL up to version 2.6.x caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
 
 State cache can be used together with GPL that is not possible on upstream DXVK, but it can be useful depending on game.
 
@@ -195,7 +195,7 @@ Asynchronous pipeline compilation is enabled with `DXVK_ASYNC=1` environment var
 
 Asynchronous pipeline compilation is disabled with `DXVK_ASYNC=0` environment variable and is equivalent to `dxvk.enableAsync = False` in `dxvk.conf`.
 
-## GPLAsync and State cache (DXVK-GPLALL 2.6.1 only)
+## GPLAsync and State cache (DXVK-GPLALL 2.6.x only)
 
 State cache fixes for GPL and Async are enabled with `DXVK_GPLASYNCCACHE=1` environment variable and is equivalent to `dxvk.gplAsyncCache = True` in `dxvk.conf`. It is enabled by default.
 
