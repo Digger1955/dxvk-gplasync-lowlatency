@@ -110,6 +110,7 @@ namespace dxvk {
     // Not supported but exist
     AI44 = MAKEFOURCC('A', 'I', '4', '4'),
     IA44 = MAKEFOURCC('I', 'A', '4', '4'),
+    CENT = MAKEFOURCC('C', 'E', 'N', 'T'),
     R2VB = MAKEFOURCC('R', '2', 'V', 'B'),
     COPM = MAKEFOURCC('C', 'O', 'P', 'M'),
     SSAA = MAKEFOURCC('S', 'S', 'A', 'A'),
@@ -155,7 +156,7 @@ namespace dxvk {
 
   /**
    * \brief Format mapping
-   * 
+   *
    * Maps a D3D9 format to a set of Vulkan formats.
    */
   struct D3D9_VK_FORMAT_MAPPING {
@@ -179,6 +180,8 @@ namespace dxvk {
 
   D3D9_FORMAT_BLOCK_SIZE GetFormatAlignedBlockSize(D3D9Format Format);
 
+  class D3D9Adapter;
+
   /**
    * \brief Format table
    *
@@ -191,6 +194,7 @@ namespace dxvk {
   public:
 
     D3D9VkFormatTable(
+            D3D9Adapter*     pParent,
       const Rc<DxvkAdapter>& adapter,
       const D3D9Options&     options);
 
@@ -226,6 +230,9 @@ namespace dxvk {
     bool m_dfSupport;
     bool m_x4r4g4b4Support;
     bool m_d16lockableSupport;
+
+    bool m_d32flockableSupport;
+    bool m_d24fs8Support;
   };
 
   inline bool IsFourCCFormat(D3D9Format format) {
