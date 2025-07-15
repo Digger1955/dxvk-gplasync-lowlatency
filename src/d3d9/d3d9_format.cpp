@@ -1,4 +1,5 @@
 #include "d3d9_format.h"
+#include "d3d9_adapter.h"
 
 namespace dxvk {
 
@@ -402,6 +403,8 @@ namespace dxvk {
 
       case D3D9Format::ATOC: return {}; // Driver hack, handled elsewhere
 
+      case D3D9Format::SSAA: return {}; // Driver hack, handled elsewhere
+
       case D3D9Format::INTZ: return {
         VK_FORMAT_D24_UNORM_S8_UINT,
         VK_FORMAT_UNDEFINED,
@@ -461,17 +464,20 @@ namespace dxvk {
   }
 
   D3D9VkFormatTable::D3D9VkFormatTable(
+          D3D9Adapter*     pParent,
     const Rc<DxvkAdapter>& adapter,
     const D3D9Options&     options) {
 
-    const auto& props = adapter->deviceProperties();
-    uint32_t vendorId  = options.customVendorId == -1 ? props.vendorID : uint32_t(options.customVendorId);
+    const uint32_t vendorId = pParent->GetVendorId();
+    const bool     isNvidia = vendorId == uint32_t(DxvkGpuVendor::Nvidia);
+    const bool     isAmd    = vendorId == uint32_t(DxvkGpuVendor::Amd);
+    const bool     isIntel  = vendorId == uint32_t(DxvkGpuVendor::Intel);
 
     // NVIDIA does not natively support any DF formats
-    m_dfSupport = vendorId == uint32_t(DxvkGpuVendor::Nvidia) ? false : options.supportDFFormats;
+    m_dfSupport = !isNvidia ? options.supportDFFormats : false;
     m_x4r4g4b4Support = options.supportX4R4G4B4;
     // Only AMD supports D16_LOCKABLE natively
-    m_d16lockableSupport = vendorId == uint32_t(DxvkGpuVendor::Amd) ? true : options.supportD16Lockable;
+    m_d16lockableSupport = isAmd;
 
     // AMD do not support 24-bit depth buffers on Vulkan,
     // so we have to fall back to a 32-bit depth format.
@@ -485,6 +491,11 @@ namespace dxvk {
     m_d16s8Support = CheckImageFormatSupport(adapter, VK_FORMAT_D16_UNORM_S8_UINT,
       VK_FORMAT_FEATURE_2_DEPTH_STENCIL_ATTACHMENT_BIT |
       VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_BIT);
+
+    // AMD and Nvidia support D32F_LOCKABLE natively (Intel does not)
+    m_d32flockableSupport = !isIntel;
+    // Only Intel supports D24FS8 natively
+    m_d24fs8Support = isIntel;
 
     if (!m_d24s8Support)
       Logger::info("D3D9: VK_FORMAT_D24_UNORM_S8_UINT -> VK_FORMAT_D32_SFLOAT_S8_UINT");
@@ -512,7 +523,13 @@ namespace dxvk {
 
     if (Format == D3D9Format::DF24 && !m_dfSupport)
       return D3D9_VK_FORMAT_MAPPING();
-    
+
+    if (Format == D3D9Format::D32F_LOCKABLE && !m_d32flockableSupport)
+      return D3D9_VK_FORMAT_MAPPING();
+
+    if (Format == D3D9Format::D24FS8 && !m_d24fs8Support)
+      return D3D9_VK_FORMAT_MAPPING();
+
     if (!m_d24s8Support && mapping.FormatColor == VK_FORMAT_D24_UNORM_S8_UINT)
       mapping.FormatColor = (mapping.Aspect & VK_IMAGE_ASPECT_STENCIL_BIT) ? VK_FORMAT_D32_SFLOAT_S8_UINT : VK_FORMAT_D32_SFLOAT;
 
@@ -562,14 +579,14 @@ namespace dxvk {
         return &unknown;
     }
   }
-  
+
 
   bool D3D9VkFormatTable::CheckImageFormatSupport(
     const Rc<DxvkAdapter>&      Adapter,
           VkFormat              Format,
           VkFormatFeatureFlags2  Features) const {
     DxvkFormatFeatures supported = Adapter->getFormatFeatures(Format);
-    
+
     return (supported.linear  & Features) == Features
         || (supported.optimal & Features) == Features;
   }
