@@ -492,6 +492,20 @@ namespace dxvk {
       ResetState(pPresentationParameters);
       m_implicitSwapchain->DestroyBackBuffers();
       m_autoDepthStencil = nullptr;
+
+      // Unbind all buffers that were still bound to the backend to avoid leaks.
+      EmitCs([](DxvkContext* ctx) {
+        ctx->bindIndexBuffer(DxvkBufferSlice(), VK_INDEX_TYPE_UINT32);
+        for (uint32_t i = 0; i < caps::MaxStreams; i++) {
+          ctx->bindVertexBuffer(i, DxvkBufferSlice(), 0);
+        }
+      });
+
+      // Tests show that regular D3D9 ends the scene in Reset
+      // while D3D9Ex doesn't.
+      // Observed in Empires: Dawn of the Modern World (D3D8)
+      // and the OSU compatibility mode (D3D9Ex).
+      m_flags.clr(D3D9DeviceFlag::InScene);
     } else {
       // Extended devices only reset the bound render targets
       for (uint32_t i = 0; i < caps::MaxSimultaneousRenderTargets; i++) {
@@ -500,7 +514,6 @@ namespace dxvk {
       SetDepthStencilSurface(nullptr);
     }
 
-    m_flags.clr(D3D9DeviceFlag::InScene);
     m_cursor.ResetCursor();
 
     /*
@@ -527,14 +540,6 @@ namespace dxvk {
       }
       return hr;
     }
-
-    // Unbind all buffers that were still bound to the backend to avoid leaks.
-    EmitCs([](DxvkContext* ctx) {
-      ctx->bindIndexBuffer(DxvkBufferSlice(), VK_INDEX_TYPE_UINT32);
-      for (uint32_t i = 0; i < caps::MaxStreams; i++) {
-        ctx->bindVertexBuffer(i, DxvkBufferSlice(), 0);
-      }
-    });
 
     Flush();
     SynchronizeCsThread(DxvkCsThread::SynchronizeAll);
@@ -2249,24 +2254,28 @@ namespace dxvk {
     bool changed = old != Value;
 
     if (likely(changed)) {
-      const bool oldClipPlaneEnabled = IsClipPlaneEnabled();
+      const uint32_t vendorId            = m_adapter->GetVendorId();
+      const bool     isNvidia            = vendorId == uint32_t(DxvkGpuVendor::Nvidia);
+      const bool     isAmd               = vendorId == uint32_t(DxvkGpuVendor::Amd);
+      const bool     isIntel             = vendorId == uint32_t(DxvkGpuVendor::Intel);
 
-      const bool oldDepthBiasEnabled = IsDepthBiasEnabled();
-
-      const bool oldATOC = IsAlphaToCoverageEnabled();
-      const bool oldNVDB = states[D3DRS_ADAPTIVETESS_X] == uint32_t(D3D9Format::NVDB);
-      const bool oldAlphaTest = IsAlphaTestEnabled();
+      const bool     oldClipPlaneEnabled = IsClipPlaneEnabled();
+      const bool     oldDepthBiasEnabled = IsDepthBiasEnabled();
+      const bool     oldATOC             = !m_isD3D8Compatible ? IsAlphaToCoverageEnabled() : false;
+      const bool     oldNVDB             = !m_isD3D8Compatible ? states[D3DRS_ADAPTIVETESS_X] == uint32_t(D3D9Format::NVDB) : false;
+      const bool     oldAlphaTest        = IsAlphaTestEnabled();
 
       states[State] = Value;
 
-      // AMD's driver hack for ATOC and RESZ
-      if (unlikely(State == D3DRS_POINTSIZE)) {
-        // ATOC
+      // AMD's driver hack for ATOC, RESZ, INST and CENT (also supported on Nvidia)
+      if (unlikely(State == D3DRS_POINTSIZE &&
+                   !m_isD3D8Compatible && !isIntel)) {
+        // ATOC (AMD specific)
         constexpr uint32_t AlphaToCoverageEnable  = uint32_t(D3D9Format::A2M1);
         constexpr uint32_t AlphaToCoverageDisable = uint32_t(D3D9Format::A2M0);
 
-        if (Value == AlphaToCoverageEnable
-         || Value == AlphaToCoverageDisable) {
+        if ((Value == AlphaToCoverageEnable
+          || Value == AlphaToCoverageDisable) && isAmd) {
           m_amdATOC = Value == AlphaToCoverageEnable;
 
           bool newATOC = IsAlphaToCoverageEnabled();
@@ -2281,17 +2290,36 @@ namespace dxvk {
           return D3D_OK;
         }
 
-        // RESZ
+        // RESZ (AMD specific - once supported by Intel
+        // as well, however modern drivers do not expose it)
         constexpr uint32_t RESZ = 0x7fa05000;
-        if (Value == RESZ) {
+        if (Value == RESZ && isAmd) {
           ResolveZ();
+          return D3D_OK;
+        }
+
+        // INST (AMD specific)
+        if (unlikely(Value == uint32_t(D3D9Format::INST) && isAmd)) {
+          // Geometry instancing is supported by SM3, but ATI/AMD
+          // exposed this hack to retroactively enable it on their
+          // SM2-capable hardware. It's esentially a no-op.
+          return D3D_OK;
+        }
+
+        // CENT (AMD & Nvidia)
+        if (unlikely(Value == uint32_t(D3D9Format::CENT))) {
+          // Centroid (alternate pixel center) hack.
+          // Taken into account anyway, so yet another no-op.
           return D3D_OK;
         }
       }
 
-      // NV's driver hack for ATOC.
-      if (unlikely(State == D3DRS_ADAPTIVETESS_Y)) {
+      // Nvidia's driver hack for ATOC (also supported on Intel), COPM and SSAA
+      if (unlikely(State == D3DRS_ADAPTIVETESS_Y &&
+                   !m_isD3D8Compatible && !isAmd)) {
+        // ATOC (Nvidia & Intel)
         constexpr uint32_t AlphaToCoverageEnable  = uint32_t(D3D9Format::ATOC);
+        // Disabling both ATOC and SSAA is done using D3DFMT_UNKNOWN (0)
         constexpr uint32_t AlphaToCoverageDisable = 0;
 
         if (Value == AlphaToCoverageEnable
@@ -2310,9 +2338,16 @@ namespace dxvk {
           return D3D_OK;
         }
 
-        if (unlikely(Value == uint32_t(D3D9Format::COPM))) {
+        // COPM (Nvidia specific)
+        if (unlikely(Value == uint32_t(D3D9Format::COPM) && isNvidia)) {
           // UE3 calls this MinimalNVIDIADriverShaderOptimization
           Logger::info("D3D9DeviceEx::SetRenderState: MinimalNVIDIADriverShaderOptimization is unsupported");
+          return D3D_OK;
+        }
+
+        // SSAA (Nvidia specific)
+        if (unlikely(Value == uint32_t(D3D9Format::SSAA) && isNvidia)) {
+          Logger::warn("D3D9DeviceEx::SetRenderState: Transparency supersampling is unsupported");
           return D3D_OK;
         }
       }
@@ -2545,14 +2580,16 @@ namespace dxvk {
         case D3DRS_ADAPTIVETESS_X:
         case D3DRS_ADAPTIVETESS_Z:
         case D3DRS_ADAPTIVETESS_W:
-          if (states[D3DRS_ADAPTIVETESS_X] == uint32_t(D3D9Format::NVDB) || oldNVDB) {
+          // Nvidia specific depth bounds test hack
+          if (!m_isD3D8Compatible &&
+              (states[D3DRS_ADAPTIVETESS_X] == uint32_t(D3D9Format::NVDB) || oldNVDB) &&
+              isNvidia) {
             m_flags.set(D3D9DeviceFlag::DirtyDepthBounds);
 
             if (m_state.depthStencil != nullptr && m_state.renderStates[D3DRS_ZENABLE])
               m_flags.set(D3D9DeviceFlag::DirtyFramebuffer);
-            break;
           }
-        [[fallthrough]];
+          break;
 
         default:
           static bool s_errorShown[256];
@@ -2647,13 +2684,21 @@ namespace dxvk {
 
 
   HRESULT STDMETHODCALLTYPE D3D9DeviceEx::SetClipStatus(const D3DCLIPSTATUS9* pClipStatus) {
-    Logger::warn("D3D9DeviceEx::SetClipStatus: Stub");
+    if (unlikely(pClipStatus == nullptr))
+      return D3DERR_INVALIDCALL;
+
+    m_state.clipStatus = *pClipStatus;
+
     return D3D_OK;
   }
 
 
   HRESULT STDMETHODCALLTYPE D3D9DeviceEx::GetClipStatus(D3DCLIPSTATUS9* pClipStatus) {
-    Logger::warn("D3D9DeviceEx::GetClipStatus: Stub");
+    if (unlikely(pClipStatus == nullptr))
+      return D3DERR_INVALIDCALL;
+
+    *pClipStatus = m_state.clipStatus;
+
     return D3D_OK;
   }
 
@@ -3010,7 +3055,7 @@ namespace dxvk {
     D3D9DeviceLock lock = LockDevice();
 
     if (unlikely(m_state.vertexDecl == nullptr))
-        return D3DERR_INVALIDCALL;
+      return D3DERR_INVALIDCALL;
 
     if (unlikely(!PrimitiveCount))
       return S_OK;
@@ -4507,6 +4552,11 @@ namespace dxvk {
 
   bool D3D9DeviceEx::SupportsSWVP() {
     return m_dxvkDevice->features().core.features.vertexPipelineStoresAndAtomics && m_dxvkDevice->features().vk12.shaderInt8;
+  }
+
+
+  bool D3D9DeviceEx::SupportsVCacheQuery() const {
+    return m_adapter->GetVendorId() == uint32_t(DxvkGpuVendor::Nvidia);
   }
 
 
@@ -6799,6 +6849,19 @@ namespace dxvk {
     ] (DxvkContext* ctx) {
       ctx->setViewports(1, &cViewport);
     });
+  }
+
+
+  bool D3D9DeviceEx::IsAlphaToCoverageEnabled() const {
+    const bool alphaTest = m_state.renderStates[D3DRS_ALPHATESTENABLE] != 0;
+
+    const D3D9CommonTexture* rt0 = GetCommonTexture(m_state.renderTargets[0].ptr());
+    const bool isMultisampled = rt0 != nullptr && (
+      rt0->Desc()->MultiSample >= D3DMULTISAMPLE_2_SAMPLES
+      || (rt0->Desc()->MultiSample == D3DMULTISAMPLE_NONMASKABLE && rt0->Desc()->MultisampleQuality > 0)
+    );
+
+    return (m_amdATOC || (m_nvATOC && alphaTest)) && rt0 != nullptr && isMultisampled;
   }
 
 
