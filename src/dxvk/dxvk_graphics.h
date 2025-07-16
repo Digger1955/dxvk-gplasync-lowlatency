@@ -563,8 +563,6 @@ namespace dxvk {
       const DxvkGraphicsPipelineStateInfo&    state,
             bool                              async);
 
-    void asyncPipeline(const DxvkGraphicsPipelineStateInfo& state);
-
     
     /**
      * \brief Compiles a pipeline
@@ -631,8 +629,11 @@ namespace dxvk {
     dxvk::mutex                                   m_mutex;
     alignas(CACHE_LINE_SIZE)
     dxvk::mutex                                   m_asyncMutex;
-    bool                                          m_async = false;
+
+    std::atomic<bool>                             m_async{false};
+
     bool                                          gplAsyncCache;
+
     sync::List<DxvkGraphicsPipelineInstance>      m_pipelines;
     uint32_t                                      m_useCount = 0;
 
