@@ -8,11 +8,7 @@ namespace dxvk {
     else
       gplAsyncCache = config.getOption<bool>("dxvk.gplAsyncCache", true);
     
-    if (env::getEnvVar("DXVK_ASYNC") == "0")
-      enableAsync = false;
-    else
-      enableAsync = config.getOption<bool>("dxvk.enableAsync", true);
-    
+    enableAsync           = config.getOption<bool>    ("dxvk.enableAsync",            true);
     enableDebugUtils      = config.getOption<bool>    ("dxvk.enableDebugUtils",       false);
     enableStateCache      = config.getOption<bool>    ("dxvk.enableStateCache",       true);
     enableMemoryDefrag    = config.getOption<Tristate>("dxvk.enableMemoryDefrag",     Tristate::Auto);
