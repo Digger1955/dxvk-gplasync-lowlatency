@@ -28,8 +28,8 @@ namespace dxvk {
     /// Enables pipeline lifetime tracking
     Tristate trackPipelineLifetime = Tristate::Auto;
 
-    // Enable async pipelines
-    bool enableAsync;
+    /// Enable async pipelines
+    bool enableAsync = true;
     // Enable state cache with gpl and fixes for async
     bool gplAsyncCache;
 
