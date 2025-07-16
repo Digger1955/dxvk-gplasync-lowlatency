@@ -269,15 +269,15 @@ namespace dxvk {
           && this->info().viewType == view->info().viewType
           && this->info().format   == view->info().format;
     }
+
     /**
      * \brief Sets render target usage frame number
      *
      * The image view will track internally when
      * it was last used as a render target. This
      * info is used for async shader compilation.
-     * \param [in] frameId Frame number
-     */
-    void setRtBindingFrameId(uint32_t frameId) {
+     * \param [in] frameId Frame number+     */
+    void setRtBindingFrameId(const uint32_t frameId) {
       if (frameId != m_rtBindingFrameId) {
         if (frameId == m_rtBindingFrameId + 1)
           m_rtBindingFrameCount += 1;
@@ -296,9 +296,10 @@ namespace dxvk {
      * \param [in] frameId Current frame ID
      * \returns \c true if async compilation is supported
      */
-    bool getRtBindingAsyncCompilationCompat() const {
+    [[nodiscard]] bool getRtBindingAsyncCompilationCompat() const {
       return m_rtBindingFrameCount >= 5;
     }
+
 
     /**
      * \brief Checks whether this view overlaps with another one
