@@ -102,7 +102,7 @@ namespace dxvk {
           continue;
         }
 
-        if (finishedId != frameId-2) {
+        if (unlikely(finishedId != frameId-2)) {
           Logger::err( str::format("internal error during low-latency frame pacing: expected finished frameId=",
             frameId-2, ", got: ", finishedId) );
         }
@@ -128,7 +128,7 @@ namespace dxvk {
         int32_t delay = std::max(gpuDelay, cpuDelay);
 
         if (m_mode == LOW_LATENCY_VRR) {
-          delay = std::max(delay, getVrrDelay(frameId, props, now));
+          delay = std::max(delay, getVrrDelay(frameId, props, now, gpuReadyPrediction));
         }
 
         delay += m_lowLatencyOffset;
@@ -271,24 +271,56 @@ namespace dxvk {
     }
 
 
-    int32_t getVrrDelay( uint64_t frameId, const SyncProps& props, const time_point& now ) {
+    int32_t getVrrDelay( uint64_t frameId, const SyncProps& props, const time_point& t, int32_t gpuReadyPrediction = 0 ) {
+
       uint64_t frameFinishedId = m_latencyMarkersStorage->getTimeline()->frameFinished.load();
       int32_t lastVBlank = std::chrono::duration_cast<microseconds> (
-        m_latencyMarkersStorage->getConstMarkers(frameFinishedId)->end - now ).count();
+        m_latencyMarkersStorage->getConstMarkers(frameFinishedId)->end - t ).count();
 
       // Presentation latency should be fairly stable, but drivers may report back
       // different levels of latency (Nvidia reports very low latencies on x11 flip compared
       // to Wayland). We take the median within a recent time window to adjust to that.
 
       // Presentation latency may vary though for other reasons, like when compiling shaders
-      // on all cpu cores we will get thread starvation and higher latency.
-      int32_t presentLatency = m_presentationStats.getMedian();
+      // on all cpu cores, we will get thread starvation and higher latency.
 
-      int32_t targetVBlank = lastVBlank
-        + (frameId - frameFinishedId) * m_vrrRefreshInterval
-        - presentLatency;
+      int32_t presentLatency = m_presentationStats.getMedian( frameId );
+      lastVBlank -= presentLatency;
 
+      // the previous frame got presented already, so we know pretty much when the next v-blank will be
+      if (frameId - frameFinishedId == 1) {
+        int32_t targetVBlank = lastVBlank + m_vrrRefreshInterval;
+        return targetVBlank - props.optimizedGpuTime - props.cpuUntilGpuStart;
+      }
+
+      int32_t previousVBlank = lastVBlank
+        + (frameId - frameFinishedId - 1) * m_vrrRefreshInterval;
+
+      // we still haven't hardcoded frame progression based on v-blanks
+      // so this case might still happen for dxgi.maxFrameLatency != 1
+      if (unlikely(frameId - frameFinishedId != 2)) {
+        return previousVBlank + m_vrrRefreshInterval - props.optimizedGpuTime - props.cpuUntilGpuStart;
+      }
+
+      // override the prediction if we know when the gpu has completed the previous frame
+      if (m_latencyMarkersStorage->getTimeline()->gpuFinished.load() == frameId-1) {
+        const LatencyMarkers* mPrev = m_latencyMarkersStorage->getConstMarkers(frameId-1);
+        gpuReadyPrediction = std::chrono::duration_cast<microseconds>(
+          mPrev->start - t + microseconds(mPrev->gpuFinished) ).count();
+      } else {
+        // the previous frame might take longer than expected and isn't finished yet.
+        // relevant especially in fps-limited scenario
+        int32_t now = std::chrono::duration_cast<microseconds> (high_resolution_clock::now() - t).count();
+        previousVBlank = std::max( previousVBlank, now );
+      }
+
+      // the previous frame should be scheduled to finish after v-blank, but there is no guarantee
+      previousVBlank = std::max( previousVBlank, gpuReadyPrediction );
+
+      // finally return the prediction for the best frame start regarding v-blanks
+      int32_t targetVBlank = previousVBlank + m_vrrRefreshInterval;
       return targetVBlank - props.optimizedGpuTime - props.cpuUntilGpuStart;
+
     }
 
 
