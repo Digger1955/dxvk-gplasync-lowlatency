@@ -1060,7 +1060,7 @@ namespace dxvk {
 
   DxvkGraphicsPipelineHandle DxvkGraphicsPipeline::getPipelineHandle(
         const DxvkGraphicsPipelineStateInfo& state,
-        bool                                 async) {
+        const bool                         async) {
     DxvkGraphicsPipelineInstance* instance = this->findInstance(state);
 
     if (unlikely(!instance)) {
@@ -1068,21 +1068,22 @@ namespace dxvk {
       if (!this->validatePipelineState(state, true))
         return DxvkGraphicsPipelineHandle();
 
-    bool useAsync = m_device->config().enableAsync && async;
+      const bool useAsync = async && m_device->config().enableAsync && env::getEnvVar("DXVK_ASYNC") != "0";
 
     // Prevent other threads from adding new instances and check again
-    std::unique_lock<dxvk::mutex> lock(useAsync ? m_asyncMutex : m_mutex);
-    instance = this->findInstance(state);
+      std::unique_lock<dxvk::mutex> lock(useAsync ? m_asyncMutex : m_mutex);
+      instance = this->findInstance(state);
 
-    if (!instance) {
-      if (useAsync) {
-        m_async = true;
-        lock.unlock();
+       if (!instance) {
+        if (useAsync) {
+          m_async.store(true, std::memory_order_release);
+          lock.unlock();
 
-        m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::High);
+          m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::High);
 
-        return DxvkGraphicsPipelineHandle();
-      } else {
+          return DxvkGraphicsPipelineHandle();
+        }
+
 
         // Keep pipeline object locked, at worst we're going to stall
         // a state cache worker and the current thread needs priority.
@@ -1103,11 +1104,9 @@ namespace dxvk {
           this->writePipelineStateToCache(state);
       }
     }
-  }
 
     return instance->getHandle();
   }
-
 
   void DxvkGraphicsPipeline::compilePipeline(
     const DxvkGraphicsPipelineStateInfo& state) {
@@ -1124,7 +1123,7 @@ namespace dxvk {
 
       // Do not compile if this pipeline can be fast linked. This essentially
       // disables the state cache for pipelines that do not benefit from it.
-      if (!gplAsyncCache && !m_async && this->canCreateBasePipeline(state))
+      if (!gplAsyncCache && !m_async.load(std::memory_order_acquire) && this->canCreateBasePipeline(state))
         return;
 
       // Prevent other threads from adding new instances and check again
@@ -1401,7 +1400,7 @@ namespace dxvk {
     if (handle)
       m_fastPipelines.insert({ key, handle });
 
-    m_async = false;
+    m_async.store(false, std::memory_order_release);
 
     return handle;
   }
