@@ -7198,13 +7198,13 @@ namespace dxvk {
       &m_state.pc.data[pushConstRange.offset]);
   }
 
-  bool DxvkContext::checkAsyncCompilationCompat() const {
-    for (uint32_t i = 0; i < m_state.om.framebufferInfo.numAttachments(); i++) {
+  bool DxvkContext::checkAsyncCompilationCompat() {
+    bool fbCompat = true;
+    for (uint32_t i = 0; fbCompat && i < m_state.om.framebufferInfo.numAttachments(); i++) {
       const auto& attachment = m_state.om.framebufferInfo.getAttachment(i);
-      if (!attachment->getRtBindingAsyncCompilationCompat())
-        return false;
+      fbCompat &= attachment.view->getRtBindingAsyncCompilationCompat();
     }
-    return true;
+    return fbCompat;
   }
 
   template<bool Resolve>
