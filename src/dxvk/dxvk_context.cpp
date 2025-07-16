@@ -6226,8 +6226,8 @@ namespace dxvk {
       : DxvkContextFlag::GpDirtyRasterizerState);
 
     // Retrieve and bind actual Vulkan pipeline handle
-    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(
-      m_state.gp.state, this->checkAsyncCompilationCompat());
+    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state,
+      this->checkAsyncCompilationCompat());
 
     if (unlikely(!pipelineInfo.handle))
       return false;
@@ -7198,14 +7198,14 @@ namespace dxvk {
       &m_state.pc.data[pushConstRange.offset]);
   }
 
-bool DxvkContext::checkAsyncCompilationCompat() {
-    bool fbCompat = true;
-    for (uint32_t i = 0; fbCompat && i < m_state.om.framebufferInfo.numAttachments(); i++) {
-      const auto& attachment = m_state.om.framebufferInfo.getAttachment(i);
-      fbCompat &= attachment.view->getRtBindingAsyncCompilationCompat();
+  bool DxvkContext::checkAsyncCompilationCompat() const {
+    for (uint32_t i = 0; i < m_state.om.framebufferInfo.numAttachments(); i++) {
+      const auto& [view] = m_state.om.framebufferInfo.getAttachment(i);
+      if (!view->getRtBindingAsyncCompilationCompat())
+        return false;
     }
-    return fbCompat;
-  }  
+    return true;
+  }
 
   template<bool Resolve>
   bool DxvkContext::commitComputeState() {
