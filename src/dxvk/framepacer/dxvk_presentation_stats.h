@@ -42,9 +42,27 @@ namespace dxvk {
     }
 
 
-    int32_t getMedian() {
+    int32_t getMedian( uint64_t frameId ) {
 
-      uint64_t targetCount = m_numLatencies / 2;
+      // use a cache so we can efficiently call this multiple times per frame
+      if (frameId == 0 || m_cachedMedian.frameId == frameId)
+        return m_cachedMedian.median;
+
+      int32_t median = getPercentile(0.5);
+
+      m_cachedMedian.frameId = frameId;
+      m_cachedMedian.median  = median;
+
+      return median;
+
+    }
+
+
+    int32_t getPercentile( float p ) const {
+
+      assert( p >= 0 && p <= 1 );
+
+      uint64_t targetCount = m_numLatencies * p;
       uint64_t count = 0;
       size_t index = 0;
       while (count < targetCount && index < m_buckets.size()) {
@@ -52,6 +70,7 @@ namespace dxvk {
         ++index;
       }
 
+      if (index > 0) --index;
       return index * 8;
 
     }
@@ -68,7 +87,7 @@ namespace dxvk {
     // if presents take longer than 5 ms, we probably have a problem?
     constexpr static int32_t maxLatency = 5000;
 
-    std::array< std::atomic<int64_t>, maxLatency / 8 > m_buckets = { };
+    std::array< std::atomic<int64_t>, 1+(maxLatency / 8) > m_buckets = { };
     std::atomic< int64_t > m_numLatencies = { 0 };
 
     struct QueueItem {
@@ -76,8 +95,15 @@ namespace dxvk {
       int32_t    latency;
     };
 
-    // should only be accessed from one thread
+    // must only be accessed from one thread
     std::deque< QueueItem > m_queue;
+
+    struct CachedMedian {
+      uint64_t frameId;
+      int32_t  median;
+    };
+
+    CachedMedian m_cachedMedian = { };
 
   };
 
