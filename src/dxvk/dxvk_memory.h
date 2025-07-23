@@ -116,6 +116,8 @@ namespace dxvk {
     VkDeviceSize maxChunkSize = MaxChunkSize;
     /// Next chunk to relocate for defragmentation
     uint32_t nextDefragChunk = ~0u;
+    /// Next chunk to evict resources from
+    uint32_t nextEvictChunk = ~0u;
 
     force_inline int64_t alloc(uint64_t size, uint64_t align) {
       if (size <= DxvkPoolAllocator::MaxSize)
@@ -144,6 +146,7 @@ namespace dxvk {
     uint32_t          memoryTypes   = 0u;
     VkDeviceSize      memoryBudget  = 0u;
     VkMemoryHeap      properties    = { };
+    bool              enableEviction = false;
   };
 
 
@@ -961,6 +964,8 @@ namespace dxvk {
     NoAllocation    = 1,
     /// Avoid using a dedicated allocation for this resource
     NoDedicated     = 2,
+    /// Do not use device memory. Used to evict resources.
+    NoDeviceMemory  = 3,
 
     eFlagEnum
   };
@@ -1458,6 +1463,9 @@ namespace dxvk {
             DxvkMemoryType&       type);
 
     void pickDefragChunk(
+            DxvkMemoryType&       type);
+
+    void evictResources(
             DxvkMemoryType&       type);
 
     void performTimedTasksLocked(
