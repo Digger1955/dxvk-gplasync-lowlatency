@@ -382,7 +382,7 @@ namespace dxvk {
     DxvkImage(
             DxvkDevice*           device,
       const DxvkImageCreateInfo&  createInfo,
-            DxvkMemoryAllocator&  memAlloc,
+            DxvkMemoryAllocator&  allocator,
             VkMemoryPropertyFlags memFlags);
     
     /**
@@ -397,7 +397,7 @@ namespace dxvk {
             DxvkDevice*           device,
       const DxvkImageCreateInfo&  createInfo,
             VkImage               imageHandle,
-            DxvkMemoryAllocator&  memAlloc,
+            DxvkMemoryAllocator&  allocator,
             VkMemoryPropertyFlags memFlags);
     
     /**
@@ -731,7 +731,6 @@ namespace dxvk {
   private:
 
     Rc<vk::DeviceFn>            m_vkd;
-    DxvkMemoryAllocator*        m_allocator   = nullptr;
     VkMemoryPropertyFlags       m_properties  = 0u;
     VkShaderStageFlags          m_shaderStages = 0u;
 
