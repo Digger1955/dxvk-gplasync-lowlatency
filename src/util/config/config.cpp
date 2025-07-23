@@ -60,7 +60,7 @@ namespace dxvk {
     /* D3D11 GAMES                                */
     /**********************************************/
 
-    /* Batman Arkham Knight - doesn't like intel vendor id 
+    /* Batman Arkham Knight - doesn't like intel vendor id
       (refuses to boot if vendor isn't 0x10de or 0x1002)  */
     { R"(\\BatmanAK\.exe$)", {{
       { "dxgi.hideIntelGpu",                "True" },
@@ -434,12 +434,12 @@ namespace dxvk {
     { R"(\\EDF6\.exe$)", {{
       { "d3d11.enableContextLock",          "True" },
     }} },
-    /* Kena: Bridge of Spirits: intel water       * 
+    /* Kena: Bridge of Spirits: intel water       *
      * flickering issues                          */
     { R"(\\Kena-Win64-Shipping\.exe$)", {{
       { "dxgi.hideIntelGpu",                 "True" },
     }} },
-    /* GTA Definitive Edition trilogy             * 
+    /* GTA Definitive Edition trilogy             *
      * Static ags crash with HDR support          */
     { R"(\\(LibertyCity|ViceCity|SanAndreas)\.exe$)", {{
       { "dxgi.enableUe4Workarounds",        "True" },
@@ -473,6 +473,16 @@ namespace dxvk {
      * images, corrupting intro video              */
     { R"(\\Rocketbirds 2\\Game\.exe$)", {{
       { "d3d11.disableDirectImageMapping",  "True" },
+    }} },
+    /* LEGO City Undercover                        *
+     * Fixes graphical corruption on cutscenes     */
+    { R"(\\LEGOLCUR_DX11\.exe$)", {{
+      { "d3d11.disableDirectImageMapping",  "True" },
+    }} },
+    /* Wargame: European Escalation: Broken gamma   *
+     * ramp when nvapi is available for some reason */
+    { R"(\\Wargame European Escalation\\WarGame\.exe$)", {{
+      { "dxgi.hideNvidiaGpu",               "True" },
     }} },
 
     /**********************************************/
@@ -647,7 +657,7 @@ namespace dxvk {
     }} },
     /* Dragon Nest                               */
     { R"(\\DragonNest_x64\.exe$)", {{
-      { "d3d9.memoryTrackTest ",            "True" },
+      { "d3d9.memoryTrackTest",             "True" },
     }} },
     /* Dal Segno                                 */
     { R"(\\DST\.exe$)", {{
@@ -922,8 +932,7 @@ namespace dxvk {
     { R"(\\ninthdawnii\.exe$)", {{
       { "d3d9.deferSurfaceCreation",        "True" },
     }} },
-    /* Delta Force: Xtreme 1 & 2                 *
-     * Black screen on Alt-Tab and performance   */
+    /* Delta Force: Xtreme 1 & 2 - Performance   */
     { R"(\\(DFX|dfx2)\.exe$)", {{
       { "d3d9.cachedDynamicBuffers",        "True" },
     }} },
@@ -936,17 +945,17 @@ namespace dxvk {
     }} },
     /* STAR WARS: The Force Unleashed            *
      * Prevents black screen on each alt-tab     */
-    { R"(\\SWTFU\.exe$)", {{ 
+    { R"(\\SWTFU\.exe$)", {{
       { "d3d9.deviceLossOnFocusLoss",       "True" },
     }} },
     /* Fallout New Vegas - Various visual issues *
      * with mods such as New Vegas Reloaded      */
-    { R"(\\FalloutNV\.exe$)", {{ 
+    { R"(\\FalloutNV\.exe$)", {{
       { "d3d9.floatEmulation",              "Strict" },
     }} },
     /* Dungeons and Dragons: Dragonshard         *
      * Massive FPS decreases in some scenes      */
-    { R"(\\Dragonshard\.exe$)", {{ 
+    { R"(\\Dragonshard\.exe$)", {{
       { "d3d9.cachedDynamicBuffers",        "True" },
     }} },
     /* Battle for Middle-earth 2 and expansion   *
@@ -959,8 +968,8 @@ namespace dxvk {
     { R"(\\WRC4\.exe$)", {{
       { "d3d9.maxFrameRate",                "60" },
     }} },
-    /* Splinter Cell Conviction - Alt-tab black  *
-     * screen and unsupported GPU complaint      */
+    /* Splinter Cell Conviction                  *
+     * Unsupported GPU complaint                 */
     { R"(\\conviction_game\.exe$)", {{
       { "dxgi.customVendorId",              "10de" },
       { "dxgi.customDeviceId",              "05e0" },
@@ -1067,6 +1076,22 @@ namespace dxvk {
       { "d3d9.customVendorId",              "10de" },
       { "d3d9.customDeviceId",              "0330" },
       { "d3d9.customDeviceDesc",            "NVIDIA GeForce FX 5900 Ultra" },
+    }} },
+    /* Astebreed - Will crash on any graphical    *
+     * options or preset changes otherwise. Also, *
+     * game speed is too fast above 60 fps.       */
+    { R"(\\Astebreed\.exe$)", {{
+      { "d3d9.countLosableResources",      "False" },
+      { "d3d9.maxFrameRate",                  "60" },
+    }} },
+    /* Dungeon Lords - Crash when saving game     */
+    { R"(\\(DLSteamEdition|dlords)\.exe$)", {{
+      { "d3d9.textureMemory",                  "0" },
+    }} },
+    /* Test Drive Unlimited 2                     *
+     * Loss of input on alt-tab                   */
+    { R"(\\TestDrive2\.exe$)", {{
+      { "d3d9.deviceLossOnFocusLoss",       "True" },
     }} },
 
     /**********************************************/
@@ -1223,16 +1248,39 @@ namespace dxvk {
       { "d3d8.forceLegacyDiscard",          "True" },
     }} },
     /* Tom Clancy's Splinter Cell                 *
-     * Fixes shadow buffers and alt-tab           */
+     * Fixes shadow buffers, broken physics       *
+     * above 60 FPS and game freezing on alt-tab  */
     { R"(\\splintercell\.exe$)", {{
+      { "d3d9.hideAmdGpu",                  "True" },
+      { "d3d9.maxFrameRate",                  "60" },
+      { "d3d9.deviceLossOnFocusLoss",       "True" },
       { "d3d8.scaleDref",                     "24" },
       { "d3d8.shadowPerspectiveDivide",     "True" },
-      { "d3d9.deviceLossOnFocusLoss",       "True" },
     }} },
     /* Trainz v1.3 (2001)                         *
      * Fixes black screen after alt-tab           */
     { R"(\\bin\\trainz\.exe$)", {{
       { "d3d9.deviceLossOnFocusLoss",       "True" },
+    }} },
+    /* A.I.M.: Artificial Intelligence Machine    *
+     * Fixes black screen after the options       *
+     * window is closed or on alt-tab             */
+    { R"(\\AIM\.exe$)", {{
+      { "d3d9.deviceLossOnFocusLoss",       "True" },
+    }} },
+    /* Star Trek: Starfleet Command III           *
+     * The GOG release ships with a D3D8 to D3D9  *
+     * wrapper that leaks several surfaces.       */
+    { R"(\\SFC3\.exe$)", {{
+      { "d3d9.countLosableResources",      "False" },
+    }} },
+    /* GTR - FIA GT Racing Game                   *                  
+     * Vram complaint & restricted resolutions    *
+     * Performance                                */
+    { R"(\\GTR (- FIA GT Rac(e)?ing Game|Demo)\\(GTR(Demo)?|(3D)?Config)\.exe$)", {{
+      { "d3d9.maxAvailableMemory",         "1024" },
+      { "d3d9.memoryTrackTest",            "True" },
+      { "d3d9.cachedDynamicBuffers",       "True" },
     }} },
   };
 
