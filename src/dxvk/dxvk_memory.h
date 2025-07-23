@@ -1472,6 +1472,8 @@ namespace dxvk {
     void performTimedTasksLocked(
             high_resolution_clock::time_point currentTime);
 
+    bool enableDefrag() const;
+
   };
   
 
