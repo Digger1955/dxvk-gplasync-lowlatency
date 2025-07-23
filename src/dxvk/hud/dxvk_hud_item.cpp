@@ -1172,7 +1172,9 @@ namespace dxvk::hud {
 
         int32_t chunkWidth = (chunk.pageCount + 15u) / 16u + 2;
 
-        if (x + w + chunkWidth > -8) {
+        bool separate = j && m_stats.chunks.at(type.chunkIndex + j - 1u).mapped != chunk.mapped;
+
+        if (x + w + chunkWidth > -8 || separate) {
           w = 0;
           h += 34;
         }
@@ -1201,7 +1203,7 @@ namespace dxvk::hud {
         } else if (!(type.properties.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
           if (!chunk.mapped) {
             // Fallback allocation, grey
-            color = 0xff202020u;
+            color = 0xff201c18u;
           } else {
             // Uncached memory, red
             color = 0xff202080u;
@@ -1213,7 +1215,9 @@ namespace dxvk::hud {
 
         int32_t chunkWidth = (chunk.pageCount + 15u) / 16u + 2;
 
-        if (x + w + chunkWidth > -8) {
+        bool separate = j && m_stats.chunks.at(type.chunkIndex + j - 1u).mapped != chunk.mapped;
+
+        if (x + w + chunkWidth > -8 || separate) {
           w = 0;
           h += 34;
         }
