@@ -2372,7 +2372,7 @@ namespace dxvk {
         case D3DRS_SLOPESCALEDEPTHBIAS: 
           const bool depthBiasEnabled = IsDepthBiasEnabled();
 
-          if (depthBiasEnabled != IsDepthBiasEnabled();)
+          if (depthBiasEnabled != IsDepthBiasEnabled())
             m_flags.set(D3D9DeviceFlag::DirtyRasterizerState);
 
           if (depthBiasEnabled)
