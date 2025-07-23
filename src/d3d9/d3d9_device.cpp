@@ -282,7 +282,8 @@ namespace dxvk {
     constexpr UINT range = 0xfff00000;
 
     // Can't have negative memory!
-    int64_t memory = std::max<int64_t>(m_availableMemory.load(), 0);
+    // Ensure the maximum is returned if available memory overflows the u32
+    int64_t memory = std::min(std::max<int64_t>(m_availableMemory.load(), 0), static_cast<int64_t>(range));
 
     return UINT(memory) & range;
   }
@@ -2339,15 +2340,23 @@ namespace dxvk {
         }
 
         // COPM (Nvidia specific)
+            // UE3 calls this MinimalNVIDIADriverShaderOptimization
         if (unlikely(Value == uint32_t(D3D9Format::COPM) && isNvidia)) {
-          // UE3 calls this MinimalNVIDIADriverShaderOptimization
-          Logger::info("D3D9DeviceEx::SetRenderState: MinimalNVIDIADriverShaderOptimization is unsupported");
+              static bool s_copmErrorShown;
+
+              if (!std::exchange(s_copmErrorShown, true))
+                Logger::info("D3D9DeviceEx::SetRenderState: MinimalNVIDIADriverShaderOptimization is unsupported");
+
           return D3D_OK;
         }
 
         // SSAA (Nvidia specific)
         if (unlikely(Value == uint32_t(D3D9Format::SSAA) && isNvidia)) {
-          Logger::warn("D3D9DeviceEx::SetRenderState: Transparency supersampling is unsupported");
+              static bool s_ssaaErrorShown;
+
+              if (!std::exchange(s_ssaaErrorShown, true))
+                Logger::warn("D3D9DeviceEx::SetRenderState: Transparency supersampling (SSAA) is unsupported");
+
           return D3D_OK;
         }
       }
@@ -3615,7 +3624,6 @@ namespace dxvk {
       // D3D9 doesn't actually unbind any vertex buffer when passing null.
       // Operation Flashpoint: Red River relies on this behavior.
       needsUpdate = false;
-      vbo.offset = 0;
     }
 
     if (needsUpdate)
