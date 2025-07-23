@@ -3,6 +3,8 @@
 #include "../util/config/config.h"
 #include "dxvk_include.h"
 
+#include "../vulkan/vulkan_loader.h"
+
 namespace dxvk {
 
   struct DxvkOptions {
@@ -68,6 +70,9 @@ namespace dxvk {
 
     /// Whether to enable tiler optimizations
     Tristate tilerMode = Tristate::Auto;
+
+    /// Overrides memory budget for DXVK
+    VkDeviceSize maxMemoryBudget = 0u;
 
     /// Frame pacing
     std::string framePace;
