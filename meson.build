@@ -106,7 +106,10 @@ if platform == 'windows'
       '/O2',
       '/Ob3',
       '/GL',
-      '/Gw'
+      '/Gw',
+      '/Qpar',
+      '/Qpar-report:2',
+      '/Qvec-report:2'
     ]
     # MSVC Linker Options
     link_args += [
