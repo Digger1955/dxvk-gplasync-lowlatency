@@ -36,7 +36,7 @@ namespace dxvk::hud {
 
 
   HudPos HudRenderLatencyItem::render(
-    const Rc<DxvkCommandList>&ctx,
+    const DxvkContextObjects& ctx,
     const HudPipelineKey&     key,
     const HudOptions&         options,
           HudRenderer&        renderer,
@@ -101,7 +101,7 @@ namespace dxvk::hud {
 
 
   HudPos HudPresentLatencyItem::render(
-    const Rc<DxvkCommandList>&ctx,
+    const DxvkContextObjects& ctx,
     const HudPipelineKey&     key,
     const HudOptions&         options,
           HudRenderer&        renderer,
@@ -172,7 +172,7 @@ namespace dxvk::hud {
 
 
   HudPos HudLatencyDetailsItem::render(
-    const Rc<DxvkCommandList>&ctx,
+    const DxvkContextObjects& ctx,
     const HudPipelineKey&     key,
     const HudOptions&         options,
           HudRenderer&        renderer,
