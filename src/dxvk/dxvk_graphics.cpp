@@ -1012,6 +1012,7 @@ namespace dxvk {
     m_vsIn  = m_shaders.vs != nullptr ? m_shaders.vs->info().inputMask  : 0;
     m_fsOut = m_shaders.fs != nullptr ? m_shaders.fs->info().outputMask : 0;
     m_specConstantMask = this->computeSpecConstantMask();
+    gplAsyncCache = m_device->config().gplAsyncCache;
 
     if (m_shaders.gs != nullptr) {
       if (m_shaders.gs->flags().test(DxvkShaderFlag::HasTransformFeedback)) {
@@ -1127,7 +1128,7 @@ namespace dxvk {
 
       // Do not compile if this pipeline can be fast linked. This essentially
       // disables the state cache for pipelines that do not benefit from it.
-      if (!m_async.load(std::memory_order_acquire) && this->canCreateBasePipeline(state))
+      if (!gplAsyncCache && !m_async.load(std::memory_order_acquire) && this->canCreateBasePipeline(state))
         return;
 
       // Prevent other threads from adding new instances and check again
@@ -1148,8 +1149,14 @@ namespace dxvk {
     instance->fastHandle.store(pipeline, std::memory_order_release);
 
     // Log pipeline state on error
-    if (!pipeline)
+    if (!pipeline) {
       this->logPipelineState(LogLevel::Error, state);
+      return;
+    }
+    
+     //Write pipeline to state cache
+     if (gplAsyncCache)
+       this->writePipelineStateToCache(state);
   }
 
 
