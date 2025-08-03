@@ -1012,7 +1012,7 @@ namespace dxvk {
     m_vsIn  = m_shaders.vs != nullptr ? m_shaders.vs->info().inputMask  : 0;
     m_fsOut = m_shaders.fs != nullptr ? m_shaders.fs->info().outputMask : 0;
     m_specConstantMask = this->computeSpecConstantMask();
-    bool gplAsyncCache = m_device->config().gplAsyncCache && env::getEnvVar("DXVK_GPLASYNCCACHE") != "0";
+    gplAsyncCache = m_device->config().gplAsyncCache && env::getEnvVar("DXVK_GPLASYNCCACHE") != "0";
 
     if (m_shaders.gs != nullptr) {
       if (m_shaders.gs->flags().test(DxvkShaderFlag::HasTransformFeedback)) {
