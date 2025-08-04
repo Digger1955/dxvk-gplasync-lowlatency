@@ -13,6 +13,9 @@ namespace dxvk {
     /// Enable debug utils
     bool enableDebugUtils = false;
 
+    /// Enable state cache
+    bool enableStateCache = true;
+
     /// Enable memory defragmentation
     Tristate enableMemoryDefrag = Tristate::Auto;
 
@@ -31,6 +34,9 @@ namespace dxvk {
 
     /// Enable async pipelines
     bool enableAsync = true;
+    
+    // Enable state cache with gpl and fixes for async
+    bool gplAsyncCache;
 
     /// Shader-related options
     Tristate useRawSsbo = Tristate::Auto;
