@@ -15,6 +15,7 @@
 namespace dxvk {
   
   class DxvkDevice;
+  class DxvkStateCache;
   class DxvkPipelineManager;
   class DxvkPipelineWorkers;
 
@@ -600,6 +601,7 @@ namespace dxvk {
     DxvkDevice*                 m_device;    
     DxvkPipelineManager*        m_manager;
     DxvkPipelineWorkers*        m_workers;
+    DxvkStateCache*             m_stateCache;
     DxvkPipelineStats*          m_stats;
 
     DxvkGraphicsPipelineShaders m_shaders;
@@ -623,6 +625,8 @@ namespace dxvk {
     dxvk::mutex                                   m_asyncMutex;
 
     std::atomic<bool>                             m_async{false};
+    
+    bool                                          gplAsyncCache;
 
     sync::List<DxvkGraphicsPipelineInstance>      m_pipelines;
     uint32_t                                      m_useCount = 0;
@@ -680,6 +684,9 @@ namespace dxvk {
             bool                           trusted) const;
 
     DxvkPipelineLayoutBuilder buildPipelineLayout() const;
+
+    void writePipelineStateToCache(
+      const DxvkGraphicsPipelineStateInfo& state) const;
 
     void logPipelineState(
             LogLevel                       level,
