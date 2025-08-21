@@ -224,6 +224,10 @@ namespace dxvk {
       && (pDesc->Usage & D3DUSAGE_DYNAMIC))
       return D3DERR_INVALIDCALL;
 
+    // Auto-Mipgen is only valid on textures (for obvious reasons)
+    if ((pDesc->Usage & D3DUSAGE_AUTOGENMIPMAP) && ResourceType == D3DRTYPE_SURFACE)
+      return D3DERR_INVALIDCALL;
+
     // Use the maximum possible mip level count if the supplied
     // mip level count is either unspecified (0) or invalid
     const uint32_t maxMipLevelCount = pDesc->MultiSample <= D3DMULTISAMPLE_NONMASKABLE
@@ -376,9 +380,6 @@ namespace dxvk {
 
     DecodeMultiSampleType(m_device->GetDXVKDevice(), m_desc.MultiSample, m_desc.MultisampleQuality, &imageInfo.sampleCount);
 
-    if (!m_desc.IsAttachmentOnly)
-      imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-
     // The image must be marked as mutable if it can be reinterpreted
     // by a view with a different format. Depth-stencil formats cannot
     // be reinterpreted in Vulkan, so we'll ignore those.
@@ -399,6 +400,9 @@ namespace dxvk {
     const bool isRT = m_desc.Usage & D3DUSAGE_RENDERTARGET;
     const bool isDS = m_desc.Usage & D3DUSAGE_DEPTHSTENCIL;
     const bool isAutoGen = m_desc.Usage & D3DUSAGE_AUTOGENMIPMAP;
+
+    if (!m_desc.IsAttachmentOnly || (!isRT && !isDS))
+      imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 
     // Are we an RT, need to gen mips or an offscreen plain surface?
     if (isRT || isAutoGen || TryOffscreenRT) {
