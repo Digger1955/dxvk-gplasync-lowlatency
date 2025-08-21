@@ -51,7 +51,7 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE D3D11VideoProcessorEnumerator::CheckVideoProcessorFormat(
           DXGI_FORMAT             Format,
           UINT*                   pFlags) {
-    Logger::err(str::format("D3D11VideoProcessorEnumerator::CheckVideoProcessorFormat: stub, format ", Format));
+    Logger::warn(str::format("D3D11VideoProcessorEnumerator::CheckVideoProcessorFormat: stub, format ", Format));
 
     if (!pFlags)
       return E_INVALIDARG;
@@ -63,7 +63,10 @@ namespace dxvk {
 
   HRESULT STDMETHODCALLTYPE D3D11VideoProcessorEnumerator::GetVideoProcessorCaps(
           D3D11_VIDEO_PROCESSOR_CAPS* pCaps) {
-    Logger::err("D3D11VideoProcessorEnumerator::GetVideoProcessorCaps: semi-stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoProcessorEnumerator::GetVideoProcessorCaps: semi-stub");
 
     if (!pCaps)
       return E_INVALIDARG;
@@ -79,7 +82,11 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE D3D11VideoProcessorEnumerator::GetVideoProcessorRateConversionCaps(
           UINT                    TypeIndex,
           D3D11_VIDEO_PROCESSOR_RATE_CONVERSION_CAPS* pCaps) {
-    Logger::err("D3D11VideoProcessorEnumerator::GetVideoProcessorRateConversionCaps: semi-stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoProcessorEnumerator::GetVideoProcessorRateConversionCaps: semi-stub");
+
     if (!pCaps || TypeIndex)
       return E_INVALIDARG;
 
@@ -99,7 +106,11 @@ namespace dxvk {
           UINT                    TypeIndex,
           UINT                    CustomRateIndex,
           D3D11_VIDEO_PROCESSOR_CUSTOM_RATE* pRate) {
-    Logger::err("D3D11VideoProcessorEnumerator::GetVideoProcessorCustomRate: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoProcessorEnumerator::GetVideoProcessorCustomRate: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -107,7 +118,11 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE D3D11VideoProcessorEnumerator::GetVideoProcessorFilterRange(
           D3D11_VIDEO_PROCESSOR_FILTER        Filter,
           D3D11_VIDEO_PROCESSOR_FILTER_RANGE* pRange) {
-    Logger::err("D3D11VideoProcessorEnumerator::GetVideoProcessorFilterRange: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoProcessorEnumerator::GetVideoProcessorFilterRange: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -408,7 +423,11 @@ namespace dxvk {
           D3D11_VIDEO_DECODER_BUFFER_TYPE Type,
           UINT*                           BufferSize,
           void**                          ppBuffer) {
-    Logger::err("D3D11VideoContext::GetDecoderBuffer: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoContext::GetDecoderBuffer: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -416,7 +435,11 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE D3D11VideoContext::ReleaseDecoderBuffer(
           ID3D11VideoDecoder*             pDecoder,
           D3D11_VIDEO_DECODER_BUFFER_TYPE Type) {
-    Logger::err("D3D11VideoContext::ReleaseDecoderBuffer: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoContext::ReleaseDecoderBuffer: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -425,14 +448,22 @@ namespace dxvk {
           ID3D11VideoDecoderOutputView*   pView,
           UINT                            KeySize,
     const void*                           pKey) {
-    Logger::err("D3D11VideoContext::DecoderBeginFrame: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoContext::DecoderBeginFrame: Stub");
+
     return E_NOTIMPL;
   }
 
 
   HRESULT STDMETHODCALLTYPE D3D11VideoContext::DecoderEndFrame(
           ID3D11VideoDecoder*             pDecoder) {
-    Logger::err("D3D11VideoContext::DecoderEndFrame: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoContext::DecoderEndFrame: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -441,7 +472,11 @@ namespace dxvk {
           ID3D11VideoDecoder*             pDecoder,
           UINT                            BufferCount,
     const D3D11_VIDEO_DECODER_BUFFER_DESC* pBufferDescs) {
-    Logger::err("D3D11VideoContext::SubmitDecoderBuffers: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoContext::SubmitDecoderBuffers: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -449,7 +484,11 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE D3D11VideoContext::DecoderExtension(
           ID3D11VideoDecoder*             pDecoder,
     const D3D11_VIDEO_DECODER_EXTENSION*  pExtension) {
-    Logger::err("D3D11VideoContext::DecoderExtension: Stub");
+    static bool s_errorShown = false;
+
+    if (!std::exchange(s_errorShown, true))
+      Logger::warn("D3D11VideoContext::DecoderExtension: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -458,6 +497,11 @@ namespace dxvk {
           ID3D11VideoProcessor*           pVideoProcessor,
           BOOL                            Enable,
     const RECT*                           pRect) {
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetOutputTargetRect: Stub.");
+
     D3D10DeviceLock lock = m_ctx->LockContext();
 
     auto state = static_cast<D3D11VideoProcessor*>(pVideoProcessor)->GetState();
@@ -465,11 +509,6 @@ namespace dxvk {
 
     if (Enable)
       state->outputTargetRect = *pRect;
-
-    static bool errorShown = false;
-
-    if (!std::exchange(errorShown, true))
-      Logger::err("D3D11VideoContext::VideoProcessorSetOutputTargetRect: Stub.");
   }
 
 
@@ -477,16 +516,16 @@ namespace dxvk {
           ID3D11VideoProcessor*           pVideoProcessor,
           BOOL                            YCbCr,
     const D3D11_VIDEO_COLOR*              pColor) {
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetOutputBackgroundColor: Stub");
+
     D3D10DeviceLock lock = m_ctx->LockContext();
 
     auto state = static_cast<D3D11VideoProcessor*>(pVideoProcessor)->GetState();
     state->outputBackgroundColorIsYCbCr = YCbCr;
     state->outputBackgroundColor = *pColor;
-
-    static bool errorShown = false;
-
-    if (!std::exchange(errorShown, true))
-      Logger::err("D3D11VideoContext::VideoProcessorSetOutputBackgroundColor: Stub");
   }
 
 
@@ -504,7 +543,10 @@ namespace dxvk {
           ID3D11VideoProcessor*           pVideoProcessor,
           D3D11_VIDEO_PROCESSOR_ALPHA_FILL_MODE AlphaFillMode,
           UINT                            StreamIndex) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetOutputAlphaFillMode: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetOutputAlphaFillMode: Stub");
   }
 
 
@@ -512,7 +554,10 @@ namespace dxvk {
           ID3D11VideoProcessor*           pVideoProcessor,
           BOOL                            Enable,
           SIZE                            Size) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetOutputConstriction: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetOutputConstriction: Stub");
   }
 
 
@@ -534,7 +579,11 @@ namespace dxvk {
     const GUID*                           pExtensionGuid,
           UINT                            DataSize,
           void*                           pData) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetOutputExtension: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetOutputExtension: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -578,9 +627,9 @@ namespace dxvk {
           D3D11_VIDEO_PROCESSOR_OUTPUT_RATE Rate,
           BOOL                            Repeat,
     const DXGI_RATIONAL*                  CustomRate) {
-    Logger::err(str::format("D3D11VideoContext::VideoProcessorSetStreamOutputRate: Stub, Rate ", Rate));
+    Logger::warn(str::format("D3D11VideoContext::VideoProcessorSetStreamOutputRate: Stub, Rate ", Rate));
     if (CustomRate)
-      Logger::err(str::format("CustomRate ", CustomRate->Numerator, "/", CustomRate->Denominator));
+      Logger::warn(str::format("CustomRate ", CustomRate->Numerator, "/", CustomRate->Denominator));
   }
 
 
@@ -589,6 +638,11 @@ namespace dxvk {
           UINT                            StreamIndex,
           BOOL                            Enable,
     const RECT*                           pRect) {
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamSourceRect: Stub.");
+
     D3D10DeviceLock lock = m_ctx->LockContext();
 
     auto state = static_cast<D3D11VideoProcessor*>(pVideoProcessor)->GetStreamState(StreamIndex);
@@ -600,11 +654,6 @@ namespace dxvk {
 
     if (Enable)
       state->srcRect = *pRect;
-
-    static bool errorShown = false;
-
-    if (!std::exchange(errorShown, true))
-      Logger::err("D3D11VideoContext::VideoProcessorSetStreamSourceRect: Stub.");
   }
 
 
@@ -632,7 +681,10 @@ namespace dxvk {
           UINT                            StreamIndex,
           BOOL                            Enable,
           FLOAT                           Alpha) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetStreamAlpha: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamAlpha: Stub");
   }
 
 
@@ -641,7 +693,10 @@ namespace dxvk {
           UINT                            StreamIndex,
           UINT                            EntryCount,
     const UINT*                           pEntries) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetStreamPalette: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamPalette: Stub");
   }
 
 
@@ -651,7 +706,10 @@ namespace dxvk {
           BOOL                            Enable,
     const DXGI_RATIONAL*                  pSrcAspectRatio,
     const DXGI_RATIONAL*                  pDstAspectRatio) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetStreamPixelAspectRatio: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamPixelAspectRatio: Stub");
   }
 
 
@@ -661,7 +719,10 @@ namespace dxvk {
           BOOL                            Enable,
           FLOAT                           Lower,
           FLOAT                           Upper) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetStreamLumaKey: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamLumaKey: Stub");
   }
 
 
@@ -674,7 +735,10 @@ namespace dxvk {
           BOOL                            BaseViewFrame0,
           D3D11_VIDEO_PROCESSOR_STEREO_FLIP_MODE FlipMode,
           int                             MonoOffset) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetStreamStereoFormat: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamStereoFormat: Stub");
   }
 
 
@@ -699,7 +763,10 @@ namespace dxvk {
           D3D11_VIDEO_PROCESSOR_FILTER    Filter,
           BOOL                            Enable,
           int                             Level) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetStreamFilter: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamFilter: Stub");
   }
 
 
@@ -709,7 +776,11 @@ namespace dxvk {
     const GUID*                           pExtensionGuid,
           UINT                            DataSize,
           void*                           pData) {
-    Logger::err("D3D11VideoContext::VideoProcessorSetStreamExtension: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorSetStreamExtension: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -782,7 +853,10 @@ namespace dxvk {
           ID3D11VideoProcessor*           pVideoProcessor,
           D3D11_VIDEO_PROCESSOR_ALPHA_FILL_MODE* pAlphaFillMode,
           UINT*                           pStreamIndex) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetOutputAlphaFillMode: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetOutputAlphaFillMode: Stub");
   }
 
 
@@ -790,7 +864,10 @@ namespace dxvk {
           ID3D11VideoProcessor*           pVideoProcessor,
           BOOL*                           pEnabled,
           SIZE*                           pSize) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetOutputConstriction: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetOutputConstriction: Stub");
   }
 
 
@@ -811,7 +888,11 @@ namespace dxvk {
     const GUID*                           pExtensionGuid,
           UINT                            DataSize,
           void*                           pData) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetOutputExtension: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetOutputExtension: Stub");
+
     return E_NOTIMPL;
   }
 
@@ -854,7 +935,10 @@ namespace dxvk {
           D3D11_VIDEO_PROCESSOR_OUTPUT_RATE* pRate,
           BOOL*                           pRepeat,
           DXGI_RATIONAL*                  pCustomRate) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamOutputRate: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamOutputRate: Stub");
   }
 
 
@@ -903,7 +987,10 @@ namespace dxvk {
           UINT                            StreamIndex,
           BOOL*                           pEnabled,
           FLOAT*                          pAlpha) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamAlpha: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamAlpha: Stub");
   }
 
 
@@ -912,7 +999,10 @@ namespace dxvk {
           UINT                            StreamIndex,
           UINT                            EntryCount,
           UINT*                           pEntries) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamPalette: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamPalette: Stub");
   }
 
 
@@ -922,7 +1012,10 @@ namespace dxvk {
           BOOL*                           pEnabled,
           DXGI_RATIONAL*                  pSrcAspectRatio,
           DXGI_RATIONAL*                  pDstAspectRatio) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamPixelAspectRatio: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamPixelAspectRatio: Stub");
   }
 
 
@@ -932,7 +1025,10 @@ namespace dxvk {
           BOOL*                           pEnabled,
           FLOAT*                          pLower,
           FLOAT*                          pUpper) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamLumaKey: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamLumaKey: Stub");
   }
 
 
@@ -945,7 +1041,10 @@ namespace dxvk {
           BOOL*                           pBaseViewFrame0,
           D3D11_VIDEO_PROCESSOR_STEREO_FLIP_MODE* pFlipMode,
           int*                            pMonoOffset) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamStereoFormat: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamStereoFormat: Stub");
   }
 
 
@@ -970,7 +1069,10 @@ namespace dxvk {
           D3D11_VIDEO_PROCESSOR_FILTER    Filter,
           BOOL*                           pEnabled,
           int*                            pLevel) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamFilter: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamFilter: Stub");
   }
 
 
@@ -980,7 +1082,10 @@ namespace dxvk {
     const GUID*                           pExtensionGuid,
           UINT                            DataSize,
           void*                           pData) {
-    Logger::err("D3D11VideoContext::VideoProcessorGetStreamExtension: Stub");
+    static bool errorShown = false;
+
+    if (!std::exchange(errorShown, true))
+      Logger::warn("D3D11VideoContext::VideoProcessorGetStreamExtension: Stub");
     return E_NOTIMPL;
   }
 
@@ -1057,7 +1162,7 @@ namespace dxvk {
           ID3D11CryptoSession*            pSession,
           UINT                            DataSize,
           void*                           pData) {
-    Logger::err("D3D11VideoContext::NegotiateCryptoSessionKeyExchange: Stub");
+    Logger::warn("D3D11VideoContext::NegotiateCryptoSessionKeyExchange: Stub");
     return E_NOTIMPL;
   }
 
@@ -1068,7 +1173,7 @@ namespace dxvk {
           ID3D11Texture2D*                pDstSurface,
           UINT                            IVSize,
           void*                           pIV) {
-    Logger::err("D3D11VideoContext::EncryptionBlt: Stub");
+    Logger::warn("D3D11VideoContext::EncryptionBlt: Stub");
   }
 
 
@@ -1081,7 +1186,7 @@ namespace dxvk {
     const void*                           pKey,
           UINT                            IVSize,
           void*                           pIV) {
-    Logger::err("D3D11VideoContext::DecryptionBlt: Stub");
+    Logger::warn("D3D11VideoContext::DecryptionBlt: Stub");
   }
 
 
@@ -1089,13 +1194,13 @@ namespace dxvk {
           ID3D11CryptoSession*            pSession,
           UINT                            RandomNumberSize,
           void*                           pRandomNumber) {
-    Logger::err("D3D11VideoContext::StartSessionKeyRefresh: Stub");
+    Logger::warn("D3D11VideoContext::StartSessionKeyRefresh: Stub");
   }
 
 
   void STDMETHODCALLTYPE D3D11VideoContext::FinishSessionKeyRefresh(
           ID3D11CryptoSession*            pSession) {
-    Logger::err("D3D11VideoContext::FinishSessionKeyRefresh: Stub");
+    Logger::warn("D3D11VideoContext::FinishSessionKeyRefresh: Stub");
   }
 
 
@@ -1103,7 +1208,7 @@ namespace dxvk {
           ID3D11CryptoSession*            pSession,
           UINT                            KeySize,
           void*                           pKey) {
-    Logger::err("D3D11VideoContext::GetEncryptionBltKey: Stub");
+    Logger::warn("D3D11VideoContext::GetEncryptionBltKey: Stub");
     return E_NOTIMPL;
   }
 
@@ -1112,7 +1217,7 @@ namespace dxvk {
           ID3D11AuthenticatedChannel*     pChannel,
           UINT                            DataSize,
           void*                           pData) {
-    Logger::err("D3D11VideoContext::NegotiateAuthenticatedChannelKeyExchange: Stub");
+    Logger::warn("D3D11VideoContext::NegotiateAuthenticatedChannelKeyExchange: Stub");
     return E_NOTIMPL;
   }
 
@@ -1123,7 +1228,7 @@ namespace dxvk {
     const void*                           pInput,
           UINT                            OutputSize,
           void*                           pOutput) {
-    Logger::err("D3D11VideoContext::QueryAuthenticatedChannel: Stub");
+    Logger::warn("D3D11VideoContext::QueryAuthenticatedChannel: Stub");
     return E_NOTIMPL;
   }
 
@@ -1133,7 +1238,7 @@ namespace dxvk {
           UINT                            InputSize,
     const void*                           pInput,
           D3D11_AUTHENTICATED_CONFIGURE_OUTPUT* pOutput) {
-    Logger::err("D3D11VideoContext::ConfigureAuthenticatedChannel: Stub");
+    Logger::warn("D3D11VideoContext::ConfigureAuthenticatedChannel: Stub");
     return E_NOTIMPL;
   }
 
