@@ -10,10 +10,16 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
+  '-O3',
+  '-pipe',
+  '-march=x86-64',
+  '-mtune=x86-64',
   '-msse',
   '-msse2',
-  '-msse3',
   '-mfpmath=sse',
+  '-fno-semantic-interposition',
+  '-flto=auto',
+  '-fuse-linker-plugin',
   '-Wimplicit-fallthrough',
   # gcc
   '-Wno-missing-field-initializers',
@@ -28,7 +34,9 @@ compiler_args = [
   '-Wno-missing-braces',
 ]
 
-link_args = []
+link_args = [
+  '-s',
+]
 
 if get_option('build_id')
   link_args += [
@@ -92,14 +100,24 @@ if platform == 'windows'
       ]
     endif
   else
-    # setup file alignment + enable PDB output for MSVC builds
-    # PDBs are useful for Windows consumers of DXVK 
+    # Windows (MSVC) Compiler Options
     compiler_args += [
-      '/Z7'
+      '/arch:SSE2',
+      '/O2',
+      '/Ob3',
+      '/GL',
+      '/Gw',
+      '/Qpar',
+      '/Qpar-report:2',
+      '/Qvec-report:2'
     ]
+    # MSVC Linker Options
     link_args += [
       '/FILEALIGN:4096',
-      '/DEBUG:FULL'
+      '/INCREMENTAL:NO',
+      '/OPT:REF,ICF',
+      '/LTCG',
+      '/DEBUG:NONE'
     ]
   endif
 
@@ -199,7 +217,7 @@ glsl_generator = generator(
 )
 
 dxvk_version = vcs_tag(
-  command: ['git', 'describe', '--dirty=+'],
+  command: ['git', 'describe', '--dirty=-gplall'],
   input:  'version.h.in',
   output: 'version.h',
 )
