@@ -3,7 +3,7 @@
 #include "dxvk_latency_markers.h"
 #include "../../util/sync/sync_signal.h"
 #include "../../util/util_env.h"
-#include <dxgi.h>
+#include "../../util/util_time.h"
 
 namespace dxvk {
 
@@ -12,6 +12,8 @@ namespace dxvk {
    */
 
   class FramePacerMode {
+
+    using time_point = high_resolution_clock::time_point;
 
   public:
 
@@ -22,9 +24,10 @@ namespace dxvk {
       MIN_LATENCY
     };
 
-    FramePacerMode( Mode mode, LatencyMarkersStorage* markerStorage, uint32_t maxFrameLatency=1 )
+    FramePacerMode( Mode mode, LatencyMarkersStorage* markerStorage, uint64_t firstFrameId, uint32_t maxFrameLatency=1 )
     : m_mode( mode ),
       m_waitLatency( maxFrameLatency+1 ),
+      m_firstFrameId( firstFrameId ),
       m_latencyMarkersStorage( markerStorage ) {
       setFpsLimitFrametimeFromEnv();
     }
@@ -35,6 +38,9 @@ namespace dxvk {
     virtual void endFrame( uint64_t frameId ) { }
 
     virtual void finishRender( uint64_t frameId ) { }
+
+    virtual void notifyQueueSubmit( uint64_t frameId, time_point t ) { }
+    virtual void notifyGpuReady( uint64_t frameId, time_point t ) { }
 
     virtual bool getDesiredPresentMode( uint32_t& presentMode ) const {
       return false; }
@@ -49,6 +55,9 @@ namespace dxvk {
 
     void signalRenderFinished( uint64_t frameId ) {
       if (m_mode) m_fenceGpuFinished.signal(frameId); }
+
+    void signalFrameFinished( uint64_t frameId ) {
+      if (m_mode) m_fenceFrameFinished.signal(frameId); }
 
     void signalGpuStart( uint64_t frameId ) {
       if (m_mode) m_fenceGpuStart.signal(frameId); }
@@ -71,14 +80,16 @@ namespace dxvk {
     void setFpsLimitFrametimeFromEnv();
 
     const uint32_t m_waitLatency;
+    const uint64_t m_firstFrameId;
     LatencyMarkersStorage* m_latencyMarkersStorage;
     std::atomic<uint32_t> m_presentMode;
     std::atomic<int32_t> m_fpsLimitFrametime = { 0 };
     bool m_fpsLimitEnvOverride = { false };
 
-    sync::Fence m_fenceGpuStart    = { sync::Fence(DXGI_MAX_SWAP_CHAIN_BUFFERS) };
-    sync::Fence m_fenceGpuFinished = { sync::Fence(DXGI_MAX_SWAP_CHAIN_BUFFERS) };
-    sync::Fence m_fenceCsFinished  = { sync::Fence(DXGI_MAX_SWAP_CHAIN_BUFFERS) };
+    sync::Fence m_fenceGpuStart;
+    sync::Fence m_fenceGpuFinished;
+    sync::Fence m_fenceFrameFinished;
+    sync::Fence m_fenceCsFinished;
 
   };
 
