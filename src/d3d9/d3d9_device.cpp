@@ -7272,6 +7272,8 @@ namespace dxvk {
 
     m_samplerBindCount++;
 
+    const D3D9CommonTexture* tex = GetCommonTexture(m_state.textures[Sampler]);
+
     EmitCs([this,
       cSlot       = slot,
       cState      = D3D9SamplerInfo(m_state.samplerStates[Sampler]),
