@@ -1,4 +1,4 @@
-project('dxvk', ['c', 'cpp'], version : '2.6.3', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++17', 'b_vscrt=static_from_buildtype', 'warning_level=2' ])
+project('dxvk', ['c', 'cpp'], version : '2.6.4', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++17', 'b_vscrt=static_from_buildtype', 'warning_level=2' ])
 
 pkg = import('pkgconfig')
 cpu_family = target_machine.cpu_family()
@@ -12,8 +12,8 @@ dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 compiler_args = [
   '-O3',
   '-pipe',
-  '-march=x86-64',
-  '-mtune=x86-64',
+  '-march=x86-64-v2',
+  '-mtune=generic',
   '-msse',
   '-msse2',
   '-mfpmath=sse',
@@ -102,7 +102,9 @@ if platform == 'windows'
   else
     # Windows (MSVC) Compiler Options
     compiler_args += [
-      '/arch:SSE2',
+      '/arch:AVX2',
+      '/favor:AMD64',
+      '/d2vzeroupper',
       '/O2',
       '/Ob3',
       '/GL',
