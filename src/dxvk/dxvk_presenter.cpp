@@ -1258,13 +1258,10 @@ namespace dxvk {
 
       lock.unlock();
 
-      FramePacer* pacer = dynamic_cast<FramePacer*>(frame.tracker.ptr());
-
       // If the present operation has succeeded, actually wait for it to complete.
       // Don't bother with it on MAILBOX / IMMEDIATE modes since doing so would
       // restrict us to the display refresh rate on some platforms (XWayland).
-      if (frame.result >= 0 && (frame.mode == VK_PRESENT_MODE_FIFO_KHR || frame.mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR
-        || (pacer && pacer->getMode() && frame.mode != VK_PRESENT_MODE_MAILBOX_KHR))) {
+      if (frame.result >= 0 && (frame.mode == VK_PRESENT_MODE_FIFO_KHR || frame.mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR)) {
         VkResult vr = m_vkd->vkWaitForPresentKHR(m_vkd->device(),
           m_swapchain, frame.frameId, std::numeric_limits<uint64_t>::max());
 
