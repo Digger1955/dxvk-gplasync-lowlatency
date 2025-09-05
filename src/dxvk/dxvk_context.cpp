@@ -438,9 +438,6 @@ namespace dxvk {
           VkClearValue          value) {
     const VkImageUsageFlags viewUsage = imageView->info().usage;
 
-    if (findOverlappingDeferredClear(imageView->image(), imageView->imageSubresources()))
-      flushClearsInline();
-
     if (aspect & VK_IMAGE_ASPECT_COLOR_BIT) {
       value.color = util::swizzleClearColor(value.color,
         util::invertComponentMapping(imageView->info().unpackSwizzle()));
@@ -4243,7 +4240,7 @@ namespace dxvk {
     if (attachmentIndex < 0) {
       this->spillRenderPass(true);
 
-      this->prepareImage(imageView->image(), imageView->imageSubresources());
+      this->prepareImage(imageView->image(), imageView->imageSubresources(), true);
       this->flushPendingAccesses(*imageView->image(), imageView->imageSubresources(), DxvkAccess::Write);
 
       if (unlikely(m_features.test(DxvkContextFeature::DebugUtils))) {
@@ -4300,6 +4297,9 @@ namespace dxvk {
       // Make sure the render pass is active so
       // that we can actually perform the clear
       this->startRenderPass();
+
+      if (findOverlappingDeferredClear(imageView->image(), imageView->imageSubresources()))
+        flushClearsInline();
 
       if (aspect & VK_IMAGE_ASPECT_COLOR_BIT) {
         uint32_t colorIndex = m_state.om.framebufferInfo.getColorAttachmentIndex(attachmentIndex);
