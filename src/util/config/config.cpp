@@ -55,6 +55,10 @@ namespace dxvk {
     { R"(\\ACShadows\.exe$)", {{
       { "dxgi.enableDummyCompositionSwapchain", "True" }
     }} },
+    /* Anno 117: Uses composition swapchain        */
+    { R"(\\Anno117\.exe$)", {{
+      { "dxgi.enableDummyCompositionSwapchain", "True" }
+    }} },
 
     /**********************************************/
     /* D3D11 GAMES                                */
@@ -486,6 +490,10 @@ namespace dxvk {
     /* Guilty Gear - Speeds up above 60 fps         */
     { R"(\\GuiltyGear\.exe$)", {{
       { "dxgi.maxFrameRate",                  "60" },
+    }} },
+    /* Everybody's Gone to the Rapture - CPU perf   */
+    { R"(\\Rapture_Release\.exe$)", {{
+      { "d3d11.cachedDynamicResources",        "a" },
     }} },
 
     /**********************************************/
@@ -1109,6 +1117,17 @@ namespace dxvk {
      * option without memory tracking in place    */
     { R"(\\Alone\.exe$)", {{
       { "d3d9.memoryTrackTest",             "True" },
+    }} },
+    /* Scarface - Rendering issues when the       *
+    /* D3DLOCK_DISCARD flag is respected          */
+    { R"(\\Scarface\.exe$)", {{
+      { "d3d9.allowDiscard",               "False" },
+    }} },
+    /* Heroes of Annihilated Empires              *
+     * Cursor and other animations play back too  *
+     * fast without a frame cap in place.         */
+    { R"(\\Heroes of Annihilated Empires.*\\engine\.exe$)", {{
+      { "d3d9.maxFrameRate",                  "60" },
     }} },
 
     /**********************************************/
