@@ -186,7 +186,6 @@ namespace dxvk {
     Rc<hud::HudClientApiItem>       m_apiHud;
     Rc<hud::HudLatencyItem>         m_latencyHud;
     Rc<hud::HudRenderLatencyItem>   m_renderLatencyHud;
-    Rc<hud::HudPresentLatencyItem>  m_presentLatencyHud;
     Rc<hud::HudLatencyDetailsItem>  m_latencyDetailsHud;
 
     std::optional<VkHdrMetadataEXT> m_hdrMetadata;
