@@ -1,6 +1,6 @@
 # DXVK GPLAsync-LowLatency (DXVK-GPLALL)
 
-A Vulkan-based translation layer for Direct3D 8/9/10/11 which allows running 3D applications on: 
+A Vulkan 1.3-based translation layer for Direct3D 8/9/10/11 which allows running 3D applications on: 
 
 1. Windows 10/11, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
 2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
@@ -13,8 +13,9 @@ For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use 
 1. Implemented Low Latency frame pacing mode that aims to greatly reduce latency with minimal impact in fps. Author - [netborg-afps](https://github.com/netborg-afps/dxvk/releases)
 2. Implemented Asynchronous pipeline compilation (Async) that aims to greatly reduce shader compilation stutter by not blocking the main thread when compiling async pipelines. Authors - [jomihaka](https://github.com/jomihaka/dxvk-poe-hack) and [Sporif](https://github.com/Sporif/dxvk-async)
 3. Implemented the ability to use both (together or separately) Graphics Pipeline Library (GPL) and Asynchronous pipeline compilation (Async) on DXVK 2.1 and later. Author - [Ph42oN](https://gitlab.com/Ph42oN/dxvk-gplasync/). Contributor - [Britt Yazel](https://gitlab.com/Ph42oN/dxvk-gplasync/-/merge_requests/12)
-4. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
-5. Provided various GCC (for any OS) builds of DXVK-GPLALL:
+4. Implemented State Cache for DXVK 2.7 starting from DXVK-GPLALL 2.7-3. Author - [Laitinlok](https://github.com/Digger1955/dxvk-gplasync-lowlatency/pull/29)
+5. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+6. Provided various GCC (for any OS) builds of DXVK-GPLALL:
 
    a) optimized for `SSE2` (`-march=x86-64, -mtune=x86-64`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level;
 
@@ -24,7 +25,7 @@ For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use 
 
 Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
-6. Provided various MSVC (only for Windows, requires [MSVCRT](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)) builds of DXVK-GPLALL:
+7. Provided various MSVC (requires [MSVCRT](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)) builds of DXVK-GPLALL:
 
    a) optimized for `SSE2` (`/arch:SSE2`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level;
 
@@ -34,16 +35,18 @@ Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/rel
 
 Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
-7. Maintaining DXVK 2.6.x branch for GPUs/drivers that do not meet [DXVK 2.7 requirements](https://github.com/doitsujin/dxvk/releases/tag/v2.7). Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+8. Maintaining DXVK 2.6.x branch for GPUs/drivers that do not meet [DXVK 2.7 requirements](https://github.com/doitsujin/dxvk/releases/tag/v2.7). Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
 Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog).
 
 Builds Reference Guide provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Builds-Reference-Guide).
 
+Contributing Guidelines provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Contributing-Guidelines).
+
 ## How to use (Windows 10/11)
 
 1. Download DXVK package from [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page.
-2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency/blob/test/README.md#dll-dependencies) to the location of application's main executable folder.
+2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency/tree/GPLALL-master-2.7?tab=readme-ov-file#dll-dependencies) to the location of application's main executable folder.
 3. Run application.
 
 **Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
@@ -128,7 +131,7 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 - `scale=x`: Scales the HUD by a factor of `x` (e.g. `1.5`)
 - `opacity=y`: Adjusts the HUD opacity by a factor of `y` (e.g. `0.5`, `1.0` being fully opaque).
 - `renderlatency`: Start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. Note that this will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. Average over 100 frames.
-- `presentlatency`: time it takes to present the finished image to the screen. Relies on the driver implementation of `vkWaitForPresentKHR`, which may or may not be accurate. `VK_PRESENT_MODE_MAILBOX_KHR` is currently not supported, because it needs special treatment. Average over 100 frames.
+- `latencydetails`: provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to competely eliminate GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
 
 Additionally, `DXVK_HUD=1` has the same effect as `DXVK_HUD=devinfo,fps`, and `DXVK_HUD=full` enables all available HUD elements.
 
@@ -175,8 +178,8 @@ In games that load their shaders during loading screens or in the menu, this can
 
 **IMPORTANT**: Disabled by default since DXVK-GPLALL 2.6.1-4. Reasons have been specified in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#dxvkenablegraphicspipelinelibrary)
 
-## State cache (DXVK-GPLALL 2.6.x only)
-DXVK-GPLALL up to version 2.6.x caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
+## State cache
+DXVK-GPLALL caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
 
 State cache can be used together with GPL that is not possible on upstream DXVK, but it can be useful depending on game.
 
@@ -186,7 +189,7 @@ The following environment variables can be used to control the cache:
   - `reset`: Clears the cache file.
 - `DXVK_STATE_CACHE_PATH=/some/directory` Specifies a directory where to put the cache files. Defaults to the current working directory of the application.
 
-**Important**: The state cache has been removed from the [upstream DXVK since version 2.7](https://github.com/doitsujin/dxvk/releases/tag/v2.7), and is therefore not available in DXVK-GPLALL 2.7 and later.
+**Important**: The state cache has been removed from the [upstream DXVK since version 2.7](https://github.com/doitsujin/dxvk/releases/tag/v2.7). It is not available in DXVK-GPLALL 2.7-1 and 2.7-2, but available in DXVK-GPLALL 2.7-3 and later.
 
 ## Asynchronous pipeline compilation (Async)
 
@@ -198,13 +201,13 @@ Asynchronous pipeline compilation is enabled with `DXVK_ASYNC=1` environment var
 
 Asynchronous pipeline compilation is disabled with `DXVK_ASYNC=0` environment variable and is equivalent to `dxvk.enableAsync = False` in `dxvk.conf`.
 
-## GPLAsync and State cache (DXVK-GPLALL 2.6.x only)
+## GPLAsync and State cache
 
 State cache fixes for GPL and Async are enabled with `DXVK_GPLASYNCCACHE=1` environment variable and is equivalent to `dxvk.gplAsyncCache = True` in `dxvk.conf`. It is enabled by default.
 
 State cache fixes for GPL and Async are disabled with `DXVK_GPLASYNCCACHE=0` environment variable and is equivalent to `dxvk.gplAsyncCache = False` in `dxvk.conf`.
 
-**Important**: The state cache has been removed from the [upstream DXVK since version 2.7](https://github.com/doitsujin/dxvk/releases/tag/v2.7), and is therefore not available in DXVK-GPLALL 2.7 and later.
+**Important**: The state cache has been removed from the [upstream DXVK since version 2.7](https://github.com/doitsujin/dxvk/releases/tag/v2.7). It is not available in DXVK-GPLALL 2.7-1 and 2.7-2, but available in DXVK-GPLALL 2.7-3 and later.
 
 ## Low Latency frame pacing
 
