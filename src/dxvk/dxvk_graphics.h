@@ -624,7 +624,7 @@ namespace dxvk {
     alignas(CACHE_LINE_SIZE)
     dxvk::mutex                                   m_asyncMutex;
 
-    bool                                          m_async = false;
+    std::atomic<bool>                             m_async{false};
     
     bool                                          gplAsyncCache;
 
