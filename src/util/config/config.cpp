@@ -113,6 +113,10 @@ namespace dxvk {
     { R"(\\nioh\.exe$)", {{
       { "d3d9.deferSurfaceCreation",        "True" },
     }} },
+    /* Anno 2205: Random crashes with state cache */
+    { R"(\\anno2205\.exe$)", {{
+      { "dxvk.enableStateCache",            "False" },
+    }} },
     /* Anno 1800: Poor performance without this   */
     { R"(\\Anno1800\.exe$)", {{
       { "d3d11.cachedDynamicResources",        "c" },
@@ -1659,8 +1663,19 @@ namespace dxvk {
     // Open the file if it exists
     std::ifstream stream(str::topath(filePath.c_str()).c_str());
 
-    if (!stream && confLine.empty())
-      return config;
+    if (!stream && confLine.empty()) {
+      filePath = "/home/" + env::getEnvVar("USER") + "/.config/dxvk.conf";
+      stream.open(str::topath(filePath.c_str()).c_str());
+#ifdef _WIN32
+      if (!stream) {
+		    filePath = env::getEnvVar("APPDATA") + "/dxvk.conf";
+        stream.open(str::topath(filePath.c_str()).c_str());
+      }
+#endif
+
+		  if (!stream)
+			  return config;
+    }
 
     // Initialize parser context
     ConfigContext ctx;
