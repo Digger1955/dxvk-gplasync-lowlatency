@@ -15,6 +15,7 @@
 namespace dxvk {
   
   class DxvkDevice;
+  class DxvkStateCache;
   class DxvkPipelineManager;
   class DxvkPipelineWorkers;
 
@@ -550,11 +551,13 @@ namespace dxvk {
      * Retrieves a pipeline handle for the given pipeline
      * state. If necessary, a new pipeline will be created.
      * \param [in] state Pipeline state vector
+     * \param [in] async Compile asynchronously
      * \returns Pipeline handle and handle type
      */
     DxvkGraphicsPipelineHandle getPipelineHandle(
-      const DxvkGraphicsPipelineStateInfo&    state);
-    
+      const DxvkGraphicsPipelineStateInfo&    state,
+            bool                              async);
+
     /**
      * \brief Compiles a pipeline
      * 
@@ -598,6 +601,7 @@ namespace dxvk {
     DxvkDevice*                 m_device;    
     DxvkPipelineManager*        m_manager;
     DxvkPipelineWorkers*        m_workers;
+    DxvkStateCache*             m_stateCache;
     DxvkPipelineStats*          m_stats;
 
     DxvkGraphicsPipelineShaders m_shaders;
@@ -617,6 +621,13 @@ namespace dxvk {
 
     alignas(CACHE_LINE_SIZE)
     dxvk::mutex                                   m_mutex;
+    alignas(CACHE_LINE_SIZE)
+    dxvk::mutex                                   m_asyncMutex;
+
+    bool                                          m_async = false;
+    
+    bool                                          gplAsyncCache;
+
     sync::List<DxvkGraphicsPipelineInstance>      m_pipelines;
     uint32_t                                      m_useCount = 0;
 
@@ -673,6 +684,9 @@ namespace dxvk {
             bool                           trusted) const;
 
     DxvkPipelineLayoutBuilder buildPipelineLayout() const;
+
+    void writePipelineStateToCache(
+      const DxvkGraphicsPipelineStateInfo& state) const;
 
     void logPipelineState(
             LogLevel                       level,

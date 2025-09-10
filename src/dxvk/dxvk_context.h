@@ -1723,7 +1723,7 @@ namespace dxvk {
     DxvkFramebufferInfo makeFramebufferInfo(
       const DxvkRenderTargets&      renderTargets);
 
-    void updateRenderTargets();
+    void updateRenderTargets(bool isDraw = false);
     
     void applyRenderTargetLoadLayouts();
 
@@ -1855,6 +1855,8 @@ namespace dxvk {
 
     Rc<DxvkSampler> createBlitSampler(
             VkFilter                  filter);
+
+    [[nodiscard]] bool checkAsyncCompilationCompat() const;
 
     DxvkGraphicsPipeline* lookupGraphicsPipeline(
       const DxvkGraphicsPipelineShaders&  shaders);

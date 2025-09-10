@@ -5,6 +5,7 @@
 #include "dxvk_device.h"
 #include "dxvk_graphics.h"
 #include "dxvk_pipemanager.h"
+#include "dxvk_state_cache.h"
 
 namespace dxvk {
 
@@ -1000,6 +1001,7 @@ namespace dxvk {
   : m_device        (device),
     m_manager       (pipeMgr),
     m_workers       (&pipeMgr->m_workers),
+    m_stateCache    (&pipeMgr->m_stateCache),
     m_stats         (&pipeMgr->m_stats),
     m_shaders       (std::move(shaders)),
     m_layout        (device, pipeMgr, buildPipelineLayout()),
@@ -1010,6 +1012,7 @@ namespace dxvk {
     m_vsIn  = m_shaders.vs != nullptr ? m_shaders.vs->info().inputMask  : 0;
     m_fsOut = m_shaders.fs != nullptr ? m_shaders.fs->info().outputMask : 0;
     m_specConstantMask = this->computeSpecConstantMask();
+    gplAsyncCache = m_device->config().gplAsyncCache && env::getEnvVar("DXVK_GPLASYNCCACHE") != "0";
 
     if (m_shaders.gs != nullptr) {
       if (m_shaders.gs->flags().test(DxvkShaderFlag::HasTransformFeedback)) {
@@ -1061,7 +1064,8 @@ namespace dxvk {
 
 
   DxvkGraphicsPipelineHandle DxvkGraphicsPipeline::getPipelineHandle(
-    const DxvkGraphicsPipelineStateInfo& state) {
+    const DxvkGraphicsPipelineStateInfo& state,
+    const bool                           async) {
     DxvkGraphicsPipelineInstance* instance = this->findInstance(state);
 
     if (unlikely(!instance)) {
@@ -1069,11 +1073,22 @@ namespace dxvk {
       if (!this->validatePipelineState(state, true))
         return DxvkGraphicsPipelineHandle();
 
+      const bool useAsync = async && m_device->config().enableAsync && env::getEnvVar("DXVK_ASYNC") != "0";
+
       // Prevent other threads from adding new instances and check again
-      std::unique_lock<dxvk::mutex> lock(m_mutex);
+      std::unique_lock<dxvk::mutex> lock(useAsync ? m_asyncMutex : m_mutex);
       instance = this->findInstance(state);
 
       if (!instance) {
+        if (useAsync) {
+          m_async = true;
+          lock.unlock();
+
+          m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::High);
+
+          return DxvkGraphicsPipelineHandle();
+        }
+
         // Keep pipeline object locked, at worst we're going to stall
         // a state cache worker and the current thread needs priority.
         bool canCreateBasePipeline = this->canCreateBasePipeline(state);
@@ -1086,6 +1101,11 @@ namespace dxvk {
         // If necessary, compile an optimized pipeline variant
         if (!instance->fastHandle.load())
           m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Low);
+
+        // Only store pipelines in the state cache that cannot benefit
+        // from pipeline libraries, or if that feature is disabled.
+        if (!canCreateBasePipeline)
+          this->writePipelineStateToCache(state);
       }
     }
 
@@ -1108,7 +1128,7 @@ namespace dxvk {
 
       // Do not compile if this pipeline can be fast linked. This essentially
       // disables the state cache for pipelines that do not benefit from it.
-      if (this->canCreateBasePipeline(state))
+      if (!gplAsyncCache && !m_async && this->canCreateBasePipeline(state))
         return;
 
       // Prevent other threads from adding new instances and check again
@@ -1129,8 +1149,14 @@ namespace dxvk {
     instance->fastHandle.store(pipeline, std::memory_order_release);
 
     // Log pipeline state on error
-    if (!pipeline)
+    if (!pipeline) {
       this->logPipelineState(LogLevel::Error, state);
+      return;
+    }
+    
+     //Write pipeline to state cache
+     if (gplAsyncCache)
+       this->writePipelineStateToCache(state);
   }
 
 
@@ -1384,6 +1410,8 @@ namespace dxvk {
     if (handle)
       m_fastPipelines.insert({ key, handle });
 
+    m_async = false;
+
     return handle;
   }
 
@@ -1625,6 +1653,19 @@ namespace dxvk {
     return builder;
   }
 
+  
+  void DxvkGraphicsPipeline::writePipelineStateToCache(
+    const DxvkGraphicsPipelineStateInfo& state) const {
+    DxvkStateCacheKey key;
+    if (m_shaders.vs  != nullptr) key.vs = m_shaders.vs->getShaderKey();
+    if (m_shaders.tcs != nullptr) key.tcs = m_shaders.tcs->getShaderKey();
+    if (m_shaders.tes != nullptr) key.tes = m_shaders.tes->getShaderKey();
+    if (m_shaders.gs  != nullptr) key.gs = m_shaders.gs->getShaderKey();
+    if (m_shaders.fs  != nullptr) key.fs = m_shaders.fs->getShaderKey();
+
+    m_stateCache->addGraphicsPipeline(key, state);
+  }
+  
   
   void DxvkGraphicsPipeline::logPipelineState(
           LogLevel                       level,
