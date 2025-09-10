@@ -1081,7 +1081,7 @@ namespace dxvk {
 
       if (!instance) {
         if (useAsync) {
-          m_async = true;
+          m_async.store(true, std::memory_order_release);
           lock.unlock();
 
           m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::High);
@@ -1128,7 +1128,7 @@ namespace dxvk {
 
       // Do not compile if this pipeline can be fast linked. This essentially
       // disables the state cache for pipelines that do not benefit from it.
-      if (!gplAsyncCache && !m_async && this->canCreateBasePipeline(state))
+      if (!gplAsyncCache && !m_async.load(std::memory_order_acquire) && this->canCreateBasePipeline(state))
         return;
 
       // Prevent other threads from adding new instances and check again
@@ -1410,7 +1410,7 @@ namespace dxvk {
     if (handle)
       m_fastPipelines.insert({ key, handle });
 
-    m_async = false;
+    m_async.store(false, std::memory_order_release);
 
     return handle;
   }
