@@ -104,7 +104,7 @@ namespace dxvk::hud {
           HudRenderer&        renderer,
           HudPos              position) {
     position.y += 16;
-    renderer.drawText(16, position, 0xffffffffu, "DXVK-LOW-LATENCY " DXVK_VERSION);
+    renderer.drawText(16, position, 0xffffffffu, "DXVK-GPLALL " DXVK_VERSION);
 
     position.y += 8;
     return position;
@@ -147,8 +147,8 @@ namespace dxvk::hud {
       driverInfo = props.driverVersion.toString();
 
     m_deviceName = props.core.properties.deviceName;
-    m_driverName = str::format("Driver:  ", props.vk12.driverName);
-    m_driverVer = str::format("Version: ", driverInfo);
+    m_driverName = str::format("Drv: ", props.vk12.driverName);
+    m_driverVer = str::format("Inf: ", driverInfo);
   }
 
 
