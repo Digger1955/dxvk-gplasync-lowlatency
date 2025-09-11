@@ -42,7 +42,7 @@ namespace dxvk {
     HANDLE_EXT(extVertexAttributeDivisor);         \
     HANDLE_EXT(khrExternalMemoryWin32);            \
     HANDLE_EXT(khrExternalSemaphoreWin32);         \
-    HANDLE_EXT(khrLoadStoreOpNone);                \
+    HANDLE_EXT(extLoadStoreOpNone);                \
     HANDLE_EXT(khrMaintenance5);                   \
     HANDLE_EXT(khrMaintenance6);                   \
     HANDLE_EXT(khrMaintenance7);                   \
@@ -867,7 +867,7 @@ namespace dxvk {
       ENABLE_EXT(khrExternalSemaphoreWin32, false),
 
       /* LOAD_OP_NONE for certain tiler optimizations */
-      ENABLE_EXT(khrLoadStoreOpNone, false),
+      ENABLE_EXT(extLoadStoreOpNone, false),
 
       /* Maintenance features, relied on in various parts of the code */
       ENABLE_EXT_FEATURE(khrMaintenance5, maintenance5, true),
