@@ -131,8 +131,7 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 - `scale=x`: Scales the HUD by a factor of `x` (e.g. `1.5`)
 - `opacity=y`: Adjusts the HUD opacity by a factor of `y` (e.g. `0.5`, `1.0` being fully opaque).
 - `renderlatency`: Start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. Note that this will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. Average over 100 frames.
-- `presentlatency`: Time it takes to present the finished image to the screen. Relies on the driver implementation of `vkWaitForPresentKHR`, which may or may not be accurate. `VK_PRESENT_MODE_MAILBOX_KHR` is currently not supported, because it needs special treatment. Average over 100 frames.
-- `latencydetails`: Enables the user to fine tune his system, settings, etc. according to the values presented in the HUD for a specific game.
+- `latencydetails`: provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to competely eliminate GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
 
 Additionally, `DXVK_HUD=1` has the same effect as `DXVK_HUD=devinfo,fps`, and `DXVK_HUD=full` enables all available HUD elements.
 
