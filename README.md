@@ -1,132 +1,58 @@
-# DXVK LOW-LATENCY
+# DXVK GPLAsync-LowLatency (DXVK-GPLALL)
 
-Enhances the original [dxvk](https://github.com/doitsujin/dxvk) with low-latency frame pacing capabilities to improve game responsiveness and input lag. It also improves latency stability over time, usually resulting in a more accurate playback speed of the generated video.
+A Vulkan 1.3-based translation layer for Direct3D 8/9/10/11 which allows running 3D applications on: 
 
-### Installation
+1. Windows 10/11, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
+2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
+3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
 
-The most common way to install is to replace the dxvk .dll files within the Proton directory. You can theoretically do this with Steam's Proton, but since Steam will periodically update Proton, it will regularly overwrite the .dll files, and thus it's instead recommended to put a Proton version into `$HOME/.local/share/Steam/compatibilitytools.d`, such as [Proton-GE](https://github.com/GloriousEggroll/proton-ge-custom) where you can find the .dll files in `files/lib/wine/dxvk`, `i386-windows` for 32 bit and `x86_64-windows` for 64 bit. Depending on the particular Proton version, the folders might be structured slightly differently. This Proton version then can be selected in Steam, Lutris, Heroic, etc.
+For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). It supports Windows 7/8/10/11, Linux/Mac, requires SSE2 CPU, GPU with Vulkan driver that is Vulkan 1.1 compliant. It has implemented Direct3D 8/9/10/11 and a build with Asynchronous pipeline compilation (Async).
 
-When using dxvk low-latency in Wine directly, see [How to use](https://github.com/netborg-afps/dxvk/?tab=readme-ov-file#how-to-use).
+## Major changes compared to [upstream DXVK](https://github.com/doitsujin/dxvk)
 
-### Options
+1. Implemented Low Latency frame pacing mode that aims to greatly reduce latency with minimal impact in fps. Author - [netborg-afps](https://github.com/netborg-afps/dxvk/releases)
+2. Implemented Asynchronous pipeline compilation (Async) that aims to greatly reduce shader compilation stutter by not blocking the main thread when compiling async pipelines. Authors - [jomihaka](https://github.com/jomihaka/dxvk-poe-hack) and [Sporif](https://github.com/Sporif/dxvk-async)
+3. Implemented the ability to use both (together or separately) Graphics Pipeline Library (GPL) and Asynchronous pipeline compilation (Async) on DXVK 2.1 and later. Author - [Ph42oN](https://gitlab.com/Ph42oN/dxvk-gplasync/). Contributor - [Britt Yazel](https://gitlab.com/Ph42oN/dxvk-gplasync/-/merge_requests/12)
+4. Implemented State Cache for DXVK 2.7 starting from DXVK-GPLALL 2.7-3. Author - [Laitinlok](https://github.com/Digger1955/dxvk-gplasync-lowlatency/pull/29)
+5. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
+6. Provided various GCC (for any OS) builds of DXVK-GPLALL:
 
-#### dxvk.framePace
+   a) optimized for `SSE2` (`-march=x86-64, -mtune=x86-64`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level;
 
-dxvk low-latency is configured such that it achieves its goal without setting any options. The exception to this currently is that the user might want to enable the VRR mode manually. Fine-tuning the pacing via options is also possible.
+   b) optimized for `SSE4.2` (`-march=x86-64-v2, -mtune=intel`) and newer Intel CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level.
 
-The config variable `dxvk.framePace` in `dxvk.conf` can be set to
+   c) optimized for `SSE4.2` (`-march=x86-64-v2, -mtune=generic`) and newer CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level.
 
-- `"max-frame-latency"` is the behaviour of upstream dxvk. Frame `i` won't start as long as frame `(i-1)-x` isn't finished, where `x` is the value of `dxgi.maxFrameLatency` / `d3d9.maxFrameLatency`. This pacing usually looks smooth, but has latency issues when GPU bound. Optimized for highest fps.
-- `"min-latency"` is essential like `max-frame-latency-0` (not selectable for the mode above), which means the start of a frame will wait until the previous one is finished. CPU/GPU no longer overlap during the transition from one frame to another and thus a lot of fps are sacrificed for prioritizing low latency. This mode is generally not recommended, but might be useful to get insights.
-- `"low-latency"` is the default mode: It combines high fps throughput with excellent game responsiveness and low input lag. Looking at a scale of a few seconds, pacing is usually more accurate in time than `max-frame-latency` since latency variations are minimized, especially when moving in and out of the GPU limit and when GPU frametimes vary a lot while being GPU bound. Looking at the pacing frame by frame, this mode relies on the game providing stable frame times for smoothness. When the game generates occasional stutters, these are filtered out nicely such that they don't interfere with the presentation of the other frames.
-- `"low-latency-vrr-240"` enhances the above mode by taking v-blank information into account, which prevents additional v-sync buffering latency. This mode automatically enables v-sync to get informed when v-blanks are happening. It will make the pacer predict future v-blanks based on the given refresh rate of 240 Hz. Replace 240 with the refresh rate of your monitor or with a value lower than that. This mode works with x11-flip and native Wayland (can be enabled in Wine via `DISPLAY= ` and via `PROTON_ENABLE_WAYLAND=1` in Proton), but cannot work on Xwayland because v-blank information is not available there (tested on Nvidia). Care has to be taken that the system is configured such that the display is indeed using a variable refresh rate, otherwise this mode won't work properly.
+Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
-Setting the frame pacing via the environment variable `DXVK_FRAME_PACE` is also supported.
+7. Provided various MSVC (requires [MSVCRT](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)) builds of DXVK-GPLALL:
 
-#### d3d9/dxgi.maxFrameRate
+   a) optimized for `SSE2` (`/arch:SSE2`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level;
 
-Fps limiting is very helpful when used together with VRR to give the pacing enough space to not hit the v-sync buffering and to minimize frametime variance. For 240 Hz VRR, a limit of about 225 fps is recommended, and similarly for other refresh rates. Finding the best fps-limit for VRR will require some testing and also depends on the game and how much frametime variation it generates on the user's system. 
+   b) optimized for `SSE4.2` (`/arch:SSE4.2`) and newer Intel (`/favor:INTEL64` a.k.a. `/favor:EM64T`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level;
 
-Fps limiting is also useful in other modes to improve consistency and/or to save power. Limiting in the low-latency modes is tightly integrated into the frame pacing and is strongly recommended to be used in place of most ingame limiters. 
+   c) optimized for `AVX2` (`/arch:AVX2`) and newer AMD (`/favor:AMD64`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level.
 
-If setting an fps limit so low that it will bore your GPU, this may result in your driver's heuristic clocking down the GPU, which can cause the latency to quadruple if you are unlucky. So you may want to watch out for that and take appropriate measures if desired.
+Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
-Setting the fps limit via the environment variable `DXVK_FRAME_RATE` is also supported.
+8. Maintaining DXVK 2.6.x branch for GPUs/drivers that do not meet [DXVK 2.7 requirements](https://github.com/doitsujin/dxvk/releases/tag/v2.7). Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
-#### dxvk.hud
+Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog).
 
-Latencies can be visualized by adding the following to `dxvk.hud`/`DXVK_HUD`:
+Builds Reference Guide provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Builds-Reference-Guide).
 
-- `renderlatency`: start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. Note that this will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. Average over 100 frames.
-- `latencydetails`: provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to competely eliminate GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode. The v-sync buffer display relies on the driver implementation of `vkWaitForPresentKHR`, which may or may not be accurate. Showing percentiles over the last 3 seconds. Recommended to care for the p75 (and p95) values if enough fps headroom is available. This display is also useful to check how external programs or specific system configurations are affecting input lag.
+Contributing Guidelines provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Contributing-Guidelines).
 
-#### dxvk.lowLatencyOffset
+## How to use (Windows 10/11)
 
-You can fine-tune the low-latency pacing options towards more fps or towards better latency. `dxvk.lowLatencyOffset = 0` is the default, a negative value will make frames start earlier by the given amount (in microseconds), and thus those frames will more likely run into buffering, which in turn may increase fps. A positive value will make frames start later by the given amount (in microseconds), which make it less likely to run into buffering and thus may improve latency.
+1. Download DXVK package from [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page.
+2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency/tree/GPLALL-master-2.7?tab=readme-ov-file#dll-dependencies) to the location of application's main executable folder.
+3. Run application.
 
-In other words, this option has an effect on the percentage of frames which go into GPU buffering and/or v-sync buffering. A value of zero will make 50% of frames go (mostly slightly) into buffering, since for most games, the prediction is so accurate that it will average out to 0 microseconds.
+**Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
 
-It's recommended to check the GPU buffer display (`dxvk.hud = "latencydetails"`) to fine-tune this setting.
-
-#### dxvk.lowLatencyAllowCpuFramesOverlap
-
-In case a game is generating a very high load (or specific load) on dxvk's CS thread (see `DXVK_HUD=cs`), setting `dxvk.lowLatencyAllowCpuFramesOverlap = False` will prevent the CS thread queue to create additional latency. 
-
-Can be set to `False` on a game by game basis. By default, this option is set to `True`, because setting it to `False` can lead to certain types of stutters being magnified, for example from shader compiling, which can lead to strong fps loss in those cases.
-
-This setting also can be seen as a workaround for the last mandatory feature which still needs to get implemented: Integrate the CS processing timings (/logic) into the pacing.
-
-### Additional considerations
-
-#### Frame pipelining
-
-Generating one frame of a video game typically can be seen as a sequence of the following operations:
-
-`input sampling -> frame simulation -> frame rendering -> present()`
-
-This frame pacing relies on games/engines following the simple principle of starting to process a new frame after finishing the previous one by calling the present() method of D3D. In the author's opinion, most games are actually doing this (at least for mouse input), as this is baked into the Direct 3D methodology, and games which care for input lag basically don't have another option. 
-
-However, this is not guaranteed. There may be games out there not following this principle. For those, perfect frame pacing is impossible to achieve in the D3D domain.
-
-#### Display Manager Presentation
-
-When dxvk is finished rendering a frame, the resulting image still needs to be transported to the display which is relevant for latency too. 
-
-Since there is not that much information available on this topic, the author has tested some configurations which may help you to make an informed decision. The following results were obtained running a game at 1800 fps, which has the option to flash a monitor region instantly during a mouse button press, such that Nvidia's Reflex Analyzer can be used to measure button-to-pixel latency on an Nvidia GPU (575.57.08 driver). These results may or may not be applicable to other hardware/drivers like AMD or Intel GPUs. 
-
-The top of the screen was selected as monitor region to make VRR, Mailbox and V-Sync more comparable to tearing (Immediate) in terms of latency. Since the measured latency will depend on the state of the screen refresh when the mouse button was pressed, many such samples give a latency range. Note that Wine Wayland is still experimental (June 2025):
-
-| Presentation      | Latency | fps |
-| :---------------- | :------: | :----: |
-| x11 flip immediate      |   1.0-4.1 ms   | 1700 fps |
-| x11 flip v-sync         |   5.9-8.8 ms   | 360 fps | ## need to double check this as well
-|  |  |  |
-| Xwayland mailbox Plasma   |  4.5-7.3 ms     | 1800 fps |
-| Xwayland v-sync Plasma    |  11.9-14.7 ms   | 360 fps |
-| Wine Wayland mailbox Plasma   |  6.4-9.1 ms     | 360 fps | ## need to double check
-| Wine Wayland v-sync Plasma    |  5.5-8.3 ms  | 360 fps |
-|  |  |  |
-| Xwayland mailbox Gnome    |  3.7-6.4 ms  | 1800 fps |
-| Xwayland v-sync Gnome    |  12.1-14.9 ms  | 360 fps |
-| Wine Wayland mailbox Gnome    |  7.3-10.8 ms  | 1400 fps |
-| Wine Wayland v-sync Gnome    |  5.9-8.7 ms  | 360 fps |
-|  |  |  |
-| x11 flip v-sync VRR | 1.4-4.4 ms | 357 fps |
-| Wine Wayland Plasma VRR| 1.7-4.6 ms | 357 fps |
-| Wine Wayland Gnome VRR| 2.0-4.9 ms | 357 fps |
-
-If you want to use x11, be sure that flip is enabled. This only works on single monitor configurations. On Nvidia, you can check if flip is enabled with `__GL_SHOW_GRAPHICS_OSD=1`. Gnome has had trouble to activate flip with Proton 10, and can work fine with Proton 9, but unfortunately has the tendency to lose flip there as well after a while. KDE Plasma should enable flip pretty straight forward, as does startx and possibly other lightweight window managers.
-
-On Windows, the dxvk presentation is not optimal since support for the dxgi flip model is not implemented yet. It's strongly recommended to set `dxvk.allowFse = True` on Windows to enable the old fullscreen exclusive mode.
-
-#### Wiki
-
-There are more things relevant to latency. SMT/Hyperthreading for example may increase latency by about 10% and may increase frame time variance depending on the game. SMT doesn't need to get disabled in BIOS, it can be turned on and off via command line too:
-
-`sudo sh -c "echo off > /sys/devices/system/cpu/smt/control"`
-
-The kernel/scheduler also plays a role for latency.
-
-There will be a wiki section soon, discussing all these latency topics not directly related to dxvk.
-
-#### Original behaviour
-
-When `dxvk.framePace = "max-frame-latency"` and `dxvk.latencySleep = Auto` are set, dxvk low-latency will behave exactly how upstream dxvk does.
-
-
-
-# DXVK (Original Description)
-
-A Vulkan-based translation layer for Direct3D 8/9/10/11 which allows running 3D applications on Linux using Wine.
-
-For the current status of the project, please refer to the [project wiki](https://github.com/doitsujin/dxvk/wiki).
-
-The most recent development builds can be found [here](https://github.com/doitsujin/dxvk/actions/workflows/artifacts.yml?query=branch%3Amaster).
-
-Release builds can be found [here](https://github.com/doitsujin/dxvk/releases).
-
-## How to use
-In order to install a DXVK package obtained from the [release](https://github.com/doitsujin/dxvk/releases) page into a given wine prefix, copy or symlink the DLLs into the following directories as follows, then open `winecfg` and manually add `native` DLL overrides for `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` under the Libraries tab.
+## How to use (Linux/MacOS)
+In order to install a DXVK package obtained from the [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page into a given wine prefix, copy or symlink the DLLs into the following directories as follows, then open `winecfg` and manually add `native` DLL overrides for `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` under the Libraries tab.
 
 In a default Wine prefix that would be as follows:
 ```
@@ -149,7 +75,9 @@ In order to remove DXVK from a prefix, remove the DLLs and DLL overrides, and ru
 
 Tools such as Steam Play, Lutris, Bottles, Heroic Launcher, etc will automatically handle setup of dxvk on their own when enabled.
 
-#### DLL dependencies 
+**Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `/home/$USER/.config/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
+
+## DLL dependencies 
 Listed below are the DLL requirements for using DXVK with any single API.
 
 - d3d8: `d3d8.dll` and `d3d9.dll`
@@ -157,15 +85,33 @@ Listed below are the DLL requirements for using DXVK with any single API.
 - d3d10: `d3d10core.dll`, `d3d11.dll` and `dxgi.dll`
 - d3d11: `d3d11.dll` and `dxgi.dll`
 
-### Notes on Vulkan drivers
+## Notes on Vulkan drivers
 Before reporting an issue, please check the [Wiki](https://github.com/doitsujin/dxvk/wiki/Driver-support) page on the current driver status and make sure you run a recent enough driver version for your hardware.
 
-### Online multi-player games
-Manipulation of Direct3D libraries in multi-player games may be considered cheating and can get your account **banned**. This may also apply to single-player games with an embedded or dedicated multiplayer portion. **Use at your own risk.**
+## Online multiplayer games
+Manipulation of Direct3D libraries in multiplayer games may be considered cheating and can get your account **banned**. This may also apply to singleplayer games with an embedded or dedicated multiplayer portion. 
 
-### HUD
+Async could theoretically trigger client-side anti-cheats, and as such, may be risky to use inside of multiplayer games. There is no information about someone getting banned for using DXVK or DXVK with Async, but - **Use at your own risk.**
+
+## `dxvk.conf` Config File Location
+
+By default, DXVK has [built-in configs](https://github.com/doitsujin/dxvk/blob/master/src/util/config/config.cpp) for specific games and GPU drivers. If user needs to change default DXVK settings, then it can be done by changing default settings in `dxvk.conf` configuration file or by using `DXVK_CONFIG` environment variable.
+
+User can create `dxvk.conf` configuration file at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) for Windows OS or at `/home/$USER/.config/dxvk.conf` (one global configuration file - second priority) for Linux/MacOS.
+
+User can change default `dxvk.conf` global coniguration file location by specifying path in `DXVK_CONFIG_FILE` environment variable:
+
+- Example (Windows): `DXVK_CONFIG_FILE=%USERPROFILE%/Documents/dxvk.conf`
+- Example (Linux): `DXVK_CONFIG_FILE=$XDG_DATA_HOME/dxvk.conf`
+- Example (MacOS): `DXVK_CONFIG_FILE=$HOME/Library/dxvk.conf`
+
+User can create `DXVK_CONFIG` to set config variables through the environment instead of a configuration file using the same syntax as in `dxvk.conf`. `;` is used as a seperator.
+
+- Example: `DXVK_CONFIG="dxgi.hideAmdGpu = True; dxgi.syncInterval = 0"`
+
+## HUD
 The `DXVK_HUD` environment variable controls a HUD which can display the framerate and some stat counters. It accepts a comma-separated list of the following options:
-- `devinfo`: Displays the name of the GPU and the driver version.
+- `devinfo`: Displays the name of the GPU, Vulkan Headers version and Vulkan Driver version.
 - `fps`: Shows the current frame rate.
 - `frametimes`: Shows a frame time graph.
 - `submissions`: Shows the number of command buffers submitted per frame.
@@ -184,45 +130,117 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 - `swvp`: Shows whether or not the device is running in software vertex processing mode *[D3D9 Only]*
 - `scale=x`: Scales the HUD by a factor of `x` (e.g. `1.5`)
 - `opacity=y`: Adjusts the HUD opacity by a factor of `y` (e.g. `0.5`, `1.0` being fully opaque).
+- `renderlatency`: Start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. Note that this will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. Average over 100 frames.
+- `presentlatency`: Time it takes to present the finished image to the screen. Relies on the driver implementation of `vkWaitForPresentKHR`, which may or may not be accurate. `VK_PRESENT_MODE_MAILBOX_KHR` is currently not supported, because it needs special treatment. Average over 100 frames.
+- `latencydetails`: Enables the user to fine tune his system, settings, etc. according to the values presented in the HUD for a specific game.
 
 Additionally, `DXVK_HUD=1` has the same effect as `DXVK_HUD=devinfo,fps`, and `DXVK_HUD=full` enables all available HUD elements.
 
-### Logs
+## Logs
 When used with Wine, DXVK will print log messages to `stderr`. Additionally, standalone log files can optionally be generated by setting the `DXVK_LOG_PATH` variable, where log files in the given directory will be called `app_d3d11.log`, `app_dxgi.log` etc., where `app` is the name of the game executable.
 
 On Windows, log files will be created in the game's working directory by default, which is usually next to the game executable.
 
-### Frame rate limit
-The `DXVK_FRAME_RATE` environment variable can be used to limit the frame rate. A value of `0` uncaps the frame rate, while any positive value will limit rendering to the given number of frames per second. Alternatively, the configuration file can be used.
+## Frame rate limit
+The `DXVK_FRAME_RATE` environment variable can be used to limit the frame rate. 
 
-### Device filter
+A value of `0` limits the frame rate to the selected display refresh rate when vertical synchronization is enabled if the actual display mode does not match the game's one. 
+
+Any positive value will limit rendering to the given number of frames per second. 
+
+A value of `-1` always disables the limiter.
+
+`DXVK_FRAME_RATE` environment variable represented in `dxvk.conf`:
+- For D3D8 and D3D9 - `d3d9.maxFrameRate`. Default value is `d3d9.maxFrameRate = 0`
+- For D3D10 and D3D11 - `dxgi.maxFrameRate` . Default value is `dxgi.maxFrameRate = 0`
+
+## Device filter
 Some applications do not provide a method to select a different GPU. In that case, DXVK can be forced to use a given device:
 - `DXVK_FILTER_DEVICE_NAME="Device Name"` Selects devices with a matching Vulkan device name, which can be retrieved with tools such as `vulkaninfo`. Matches on substrings, so "VEGA" or "AMD RADV VEGA10" is supported if the full device name is "AMD RADV VEGA10 (LLVM 9.0.0)", for example. If the substring matches more than one device, the first device matched will be used.
-- `DXVK_FILTER_DEVICE_UUID="00000000000000000000000000000001"` Selects a device by matching its Vulkan device UUID, which can also be retrieved using tools such as `vulkaninfo`. The UUID must be a 32-character hexadecimal string with no dashes. This method provides more precise selection, especially when using multiple identical GPUs.
+- `DXVK_FILTER_DEVICE_UUID="00000000000000000000000000000001"` Selects a device by matching its Vulkan device UUID, which can also be retrieved using tools such as vulkaninfo. The UUID must be a 32-character hexadecimal string with no dashes. This method provides more precise selection, especially when using multiple identical GPUs.
 
 **Note:** If the device filter is configured incorrectly, it may filter out all devices and applications will be unable to create a D3D device.
 
-### Debugging
+## Debugging
 The following environment variables can be used for **debugging** purposes.
 - `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation` Enables Vulkan debug layers. Highly recommended for troubleshooting rendering issues and driver crashes. Requires the Vulkan SDK to be installed on the host system.
 - `DXVK_LOG_LEVEL=none|error|warn|info|debug` Controls message logging.
 - `DXVK_LOG_PATH=/some/directory` Changes path where log files are stored. Set to `none` to disable log file creation entirely, without disabling logging.
 - `DXVK_DEBUG=markers|validation` Enables use of the `VK_EXT_debug_utils` extension for translating performance event markers, or to enable Vulkan validation, respecticely.
-- `DXVK_CONFIG_FILE=/xxx/dxvk.conf` Sets path to the configuration file.
-- `DXVK_CONFIG="dxgi.hideAmdGpu = True; dxgi.syncInterval = 0"` Can be used to set config variables through the environment instead of a configuration file using the same syntax. `;` is used as a seperator.
 
-### Graphics Pipeline Library
+## Graphics Pipeline Library (GPL)
 On drivers which support `VK_EXT_graphics_pipeline_library` Vulkan shaders will be compiled at the time the game loads its D3D shaders, rather than at draw time. This reduces or eliminates shader compile stutter in many games when compared to the previous system.
 
 In games that load their shaders during loading screens or in the menu, this can lead to prolonged periods of very high CPU utilization, especially on weaker CPUs. For affected games it is recommended to wait for shader compilation to finish before starting the game to avoid stutter and low performance. Shader compiler activity can be monitored with `DXVK_HUD=compiler`.
 
+**Important**: Usage of Graphics Pipeline Library significantly increases VRAM usage, due to this if you are low on VRAM, it can be better to disable it. That can be done with option `dxvk.enableGraphicsPipelineLibrary = False` in `dxvk.conf`.
+
 **Note:** Games which only load their D3D shaders at draw time (e.g. most Unreal Engine games) will still exhibit some stutter, although it should still be less severe than without this feature.
+
+**IMPORTANT**: Disabled by default since DXVK-GPLALL 2.6.1-4. Reasons have been specified in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#dxvkenablegraphicspipelinelibrary)
+
+## State cache
+DXVK-GPLALL caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
+
+State cache can be used together with GPL that is not possible on upstream DXVK, but it can be useful depending on game.
+
+The following environment variables can be used to control the cache:
+- `DXVK_STATE_CACHE`: Controls the state cache. The following values are supported:
+  - `disable`: Disables the cache entirely.
+  - `reset`: Clears the cache file.
+- `DXVK_STATE_CACHE_PATH=/some/directory` Specifies a directory where to put the cache files. Defaults to the current working directory of the application.
+
+**Important**: The state cache has been removed from the [upstream DXVK since version 2.7](https://github.com/doitsujin/dxvk/releases/tag/v2.7). It is not available in DXVK-GPLALL 2.7-1 and 2.7-2, but available in DXVK-GPLALL 2.7-3 and later.
+
+## Asynchronous pipeline compilation (Async)
+
+Originally started as hacky solution for shader compilation stutter in dxvk. Similar solution was later added to dxvk itself and promptly removed.
+
+Enabling this solution results in a lot less shader compilation stuttering by not blocking the main thread when compiling async pipelines and (not necessarily) miscellaneous graphical issues while shaders are compiling for the first time.
+
+Asynchronous pipeline compilation is enabled with `DXVK_ASYNC=1` environment variable and is equivalent to `dxvk.enableAsync = True` in `dxvk.conf`. It is enabled by default.
+
+Asynchronous pipeline compilation is disabled with `DXVK_ASYNC=0` environment variable and is equivalent to `dxvk.enableAsync = False` in `dxvk.conf`.
+
+## GPLAsync and State cache
+
+State cache fixes for GPL and Async are enabled with `DXVK_GPLASYNCCACHE=1` environment variable and is equivalent to `dxvk.gplAsyncCache = True` in `dxvk.conf`. It is enabled by default.
+
+State cache fixes for GPL and Async are disabled with `DXVK_GPLASYNCCACHE=0` environment variable and is equivalent to `dxvk.gplAsyncCache = False` in `dxvk.conf`.
+
+**Important**: The state cache has been removed from the [upstream DXVK since version 2.7](https://github.com/doitsujin/dxvk/releases/tag/v2.7). It is not available in DXVK-GPLALL 2.7-1 and 2.7-2, but available in DXVK-GPLALL 2.7-3 and later.
+
+## Low Latency frame pacing
+
+Enhances the original [dxvk](https://github.com/doitsujin/dxvk) with low-latency frame pacing capabilities to improve game responsiveness and input lag. It also improves latency stability over time, usually resulting in a more accurate playback speed of the generated video.
+
+Low-Latency frame pacing mode aims to reduce latency with minimal impact in fps. Effective when operating in the GPU-limit. Efficient to be used in the CPU-limit as well.
+
+Greatly reduces input lag variations when switching between CPU- and GPU-limit, and compared to the max-frame-latency approach, it has a much more stable input lag when GPU running times change dramatically, which can happen for example when rotating within a scene.
+
+Latency has been decreased dramatically in some games by speeding up the dxvk-internal flush heuristic delivering GPU submissions quicker, which was presumably tuned for bandwidth/fps.
+
+An interesting observation while playtesting was that not only the input lag was affected, but the video generated did progress more cleanly in time as well with regards to the wow and flutter effect.
+
+Optimized for Variable Refresh Rate (VRR) displays, `VK_PRESENT_MODE_IMMEDIATE_KHR` (V-Sync Off) and `VK_PRESENT_MODE_FIFO_KHR` (V-Sync On). It also comes with its own fps-limiter which is typically used to prevent the game's fps exceeding the monitor's refresh rate.
+
+### Usage
+
+`DXVK_FRAME_PACE` environment variable has the next options: `max-frame-latency`, `min-latency`, `low-latency` and `low-latency-vrr-x`. Default is `DXVK_FRAME_PACE=low-latency`.
+`low-latency-vrr-x` is a special option, which requires to specify display refresh rate, instead of `x`. For example, if user has 360 Hz VRR display, then option must be `low-latency-vrr-360`. **Important:** Care has to be taken that the system is configured such that the display is indeed using a variable refresh rate, otherwise this mode won't work properly.
+
+`DXVK_FRAME_PACE` environment variable represented in the `dxvk.conf` as `dxvk.framePace`. Default is `dxvk.framePace = "low-latency"`
+
+`dxvk.lowLatencyOffset` option in `dxvk.conf` allows for fine-tuning the `low-latency mode`. Values are in microseconds. Positive values might improve responsiveness even further, although only very slightly, this may be relevant for edge cases. Negative values might improve fps. Default is `dxvk.lowLatencyOffset = 0`
+
+`dxvk.lowLatencyAllowCpuFramesOverlap` option in `dxvk.conf` controls whether a frame is allowed to begin before finishing processing the cpu-part of the previous one, when low-latency frame pacing is used. Snappiness may be improved when disallowing overlap. On the other hand, this might also decrease fps in certain cases. Default is `dxvk.lowLatencyAllowCpuFramesOverlap = True`
+
 
 ## Build instructions
 
 In order to pull in all submodules that are needed for building, clone the repository using the following command:
 ```
-git clone --recursive https://github.com/doitsujin/dxvk.git
+git clone --recursive https://github.com/Digger1955/dxvk-gplasync-lowlatency
 ```
 
 ### Requirements:
@@ -278,13 +296,13 @@ does have `--enable-threads=posix` enabled during configure. If your distro does
 ship its mingw-w64-gcc binary with `--enable-threads=win32` you might have to
 recompile locally or open a bug at your distro's bugtracker to ask for it. 
 
-# DXVK Native
+## DXVK Native
 
 DXVK Native is a version of DXVK which allows it to be used natively without Wine.
 
 This is primarily useful for game and application ports to either avoid having to write another rendering backend, or to help with port bringup during development.
 
-[Release builds](https://github.com/doitsujin/dxvk/releases) are built using the Steam Runtime.
+[Release builds](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) are built using the Steam Runtime.
 
 ### How does it work?
 
