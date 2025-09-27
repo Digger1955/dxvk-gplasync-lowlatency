@@ -278,12 +278,16 @@ namespace dxvk {
     /* Crazy Machines 3 - crashes on long device  *
      * descriptions                               */
     { R"(\\cm3\.exe$)", {{
-      { "dxgi.customDeviceDesc",    "DXVK Adapter" },
+      { "dxgi.customDeviceDesc",     "DXVK Device" },
     }} },
     /* World of Final Fantasy: Broken and useless *
-     * use of 4x MSAA throughout the renderer     */
+     * use of 4x MSAA throughout the renderer.    *
+     * Water doesn't render if the GPU name       *
+     * contains "Radeon", clearly us plebs aren't *
+     * worthy of the divine pixel liquid.         */
     { R"(\\WOFF\.exe$)", {{
       { "d3d11.disableMsaa",                "True" },
+      { "dxgi.customDeviceDesc",     "DXVK Device" },
     }} },
     /* Mary Skelter 2 - Broken MSAA               */
     { R"(\\MarySkelter2\.exe$)", {{
