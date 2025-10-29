@@ -1257,6 +1257,8 @@ namespace dxvk {
     
     m_monitor = wsi::getDefaultMonitor();
 
+    wsi::saveWindowState(m_window, &m_windowState, true);
+
     if (!wsi::enterFullscreenMode(m_monitor, m_window, &m_windowState, true)) {
         Logger::err("D3D9: EnterFullscreenMode: Failed to enter fullscreen mode");
         return D3DERR_INVALIDCALL;
@@ -1279,10 +1281,11 @@ namespace dxvk {
 
     ResetWindowProc(m_window);
     
-    if (!wsi::leaveFullscreenMode(m_window, &m_windowState, false)) {
+    if (!wsi::leaveFullscreenMode(m_window, &m_windowState)) {
       Logger::err("D3D9: LeaveFullscreenMode: Failed to exit fullscreen mode");
       return D3DERR_NOTAVAILABLE;
     }
+    wsi::restoreWindowState(m_window, &m_windowState, false);
 
     m_parent->NotifyFullscreen(m_window, false);
     
