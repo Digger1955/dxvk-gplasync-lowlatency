@@ -1148,6 +1148,10 @@ namespace dxvk {
     { R"(\\(BioDungeon|BioLab2|MineDungeon2)\.exe$)", {{
       { "d3d9.countLosableResources",      "False" },
     }} },
+    /* Ridge Racer Unbounded - Vertex explosions  */
+    { R"(\\RRU(_demo)?\.exe$)", {{
+      { "dxvk.zeroMappedMemory",            "True" },
+    }} },
 
     /**********************************************/
     /* D3D8 GAMES                                 */
