@@ -1390,7 +1390,7 @@ namespace dxvk {
 
     void BindSpecConstants();
 
-    void TrackBufferMappingBufferSequenceNumber(
+    void TrackBufferSequenceNumber(
       D3D9CommonBuffer* pResource);
 
     void TrackTextureMappingBufferSequenceNumber(
