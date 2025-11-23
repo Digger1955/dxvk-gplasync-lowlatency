@@ -126,7 +126,7 @@ namespace dxvk {
     if (unlikely(FAILED(res)))
       return res;
 
-    Com<d3d9::IDirect3DDevice9> pDevice9 = nullptr;
+    Com<d3d9::IDirect3DDevice9> pDevice9;
     d3d9::D3DPRESENT_PARAMETERS params = ConvertPresentParameters9(pPresentationParameters);
     res = m_d3d9->CreateDevice(
       Adapter,
@@ -146,7 +146,6 @@ namespace dxvk {
         DeviceType, hFocusWindow, BehaviorFlags,
         pPresentationParameters
       ));
-
     } catch (const DxvkError& e) {
       Logger::err(e.message());
       return D3DERR_NOTAVAILABLE;
