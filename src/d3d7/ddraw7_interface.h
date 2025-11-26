@@ -44,7 +44,7 @@ namespace dxvk {
 
     HRESULT STDMETHODCALLTYPE GetFourCCCodes(LPDWORD lpNumCodes, LPDWORD lpCodes);
 
-    HRESULT STDMETHODCALLTYPE GetGDISurface(IDirectDrawSurface7** lplpGDIDDSurface);
+    HRESULT STDMETHODCALLTYPE GetGDISurface(LPDIRECTDRAWSURFACE7 *lplpGDIDDSurface);
 
     HRESULT STDMETHODCALLTYPE GetMonitorFrequency(LPDWORD lpdwFrequency);
 
@@ -64,7 +64,7 @@ namespace dxvk {
 
     HRESULT STDMETHODCALLTYPE GetAvailableVidMem(LPDDSCAPS2 lpDDCaps, LPDWORD lpdwTotal, LPDWORD lpdwFree);
 
-    HRESULT STDMETHODCALLTYPE GetSurfaceFromDC(HDC hdc, IDirectDrawSurface7** pSurf);
+    HRESULT STDMETHODCALLTYPE GetSurfaceFromDC(HDC hdc, LPDIRECTDRAWSURFACE7 *pSurf);
 
     HRESULT STDMETHODCALLTYPE RestoreAllSurfaces();
 
@@ -102,6 +102,10 @@ namespace dxvk {
       return m_cooperativeLevel;
     }
 
+    DWORD HasWaitedForVBlank() const {
+      return m_hasWaitedForVBlank;
+    }
+
     HWND GetHWND() const {
       return m_hwnd;
     }
@@ -119,8 +123,9 @@ namespace dxvk {
 
     HWND                        m_hwnd       = nullptr;
 
+    bool                        m_hasWaitedForVBlank = false;
+
     DWORD                       m_cooperativeLevel = 0;
-    DWORD                       m_vBlankFlags      = 0;
 
     DDraw7Surface*              m_lastDepthStencil = nullptr;
 
