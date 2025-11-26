@@ -1392,7 +1392,8 @@ namespace dxvk {
 
 
   std::string D3D9SwapChainEx::GetApiName() {
-    return this->GetParent()->IsD3D8Compatible() ? "D3D8" :
+    return this->GetParent()->IsD3D7Compatible() ? "D3D7" :
+           this->GetParent()->IsD3D8Compatible() ? "D3D8" :
            this->GetParent()->IsExtended() ? "D3D9Ex" : "D3D9";
   }
 
