@@ -129,6 +129,8 @@ namespace dxvk {
             REFIID  riid,
             void** ppvObject);
 
+    void EnableD3D7CompatibilityMode();
+
     void EnableD3D8CompatibilityMode();
 
     const Config* GetConfig() const;
