@@ -1398,11 +1398,9 @@ namespace dxvk {
       { "d3d9.cachedDynamicBuffers",        "True" },
       { "d3d9.maxFrameRate",                  "60" },
     }} },
-    /* Emperor: Battle for Dune - Performance     *
-     * and fixes main menu animations             */
+    /* Emperor: Battle for Dune - Performance     */
     { R"(\\Emperor.*Dune\\Game\.exe$)", {{
       { "d3d9.cachedDynamicBuffers",        "True" },
-      { "d3d9.maxFrameRate",                  "60" },
     }} },
     /* Battle Isle: The Andosia War - Performance *
      * and black screen prevention on startup,    *
@@ -1410,7 +1408,7 @@ namespace dxvk {
     { R"(\\bitaw\.exe$)", {{
       { "d3d9.cachedDynamicBuffers",        "True" },
       { "d3d9.maxFrameRate",                  "60" },
-      { "d3d7.strictBackBufferGuard",       "True" },
+      { "d3d7.backBufferGuard",           "Strict" },
     }} },
     /* Startopia - Indexed draw performance       */
     { R"(\\startopia\.exe$)", {{
@@ -1419,10 +1417,11 @@ namespace dxvk {
     }} },
     /* Escape from Monkey Island                  *
      * Startup crash with direct buffer mapping,  *
-     * and broken animations / physics            */
+     * broken animations/physics, and flip logic  */
     { R"(\\Monkey4\.exe$)", {{
       { "d3d9.maxFrameRate",                  "30" },
       { "d3d9.allowDirectBufferMapping",   "False" },
+      { "d3d7.forceSingleBackBuffer",       "True" },
     }} },
     /* Sacred - Fixes missing text                */
     { R"(\\Sacred\.exe$)", {{
@@ -1581,6 +1580,19 @@ namespace dxvk {
     /* (The) Summoner - Accelerated game speed    */
     { R"(\\Sum\.exe$)", {{
       { "d3d9.maxFrameRate",                  "60" },
+    }} },
+    /* Wizardry 8 - Broken input handling         */
+    { R"(\\Wiz8\.exe$)", {{
+      { "d3d9.maxFrameRate",                  "60" },
+    }} },
+    /* Giants: Citizen Kabuto                     *
+     * Broken input handling at high framerates   */
+    { R"(\\Giants\.exe$)", {{
+      { "d3d9.maxFrameRate",                  "60" },
+    }} },
+    /* The Mystery of the Druids                  */
+    { R"(\\edd\.exe$)", {{
+      { "d3d7.forceProxiedPresent",         "True" },
     }} },
 
   };
