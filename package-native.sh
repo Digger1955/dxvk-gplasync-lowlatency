@@ -71,6 +71,7 @@ function build_arch {
         --bindir "$2"                        \
         --libdir "$2"                        \
         -Dbuild_id=$opt_buildid              \
+        -Denable_d3d7=false                  \
         --force-fallback-for=libdisplay-info \
         "$DXVK_BUILD_DIR/build.$1"
 
