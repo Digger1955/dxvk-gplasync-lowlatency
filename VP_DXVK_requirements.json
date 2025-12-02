@@ -80,10 +80,12 @@
                 "VK_KHR_maintenance7": 1,
                 "VK_KHR_present_id": 1,
                 "VK_KHR_present_wait": 1,
+                "VK_KHR_present_id2": 1,
+                "VK_KHR_present_wait2": 1,
                 "VK_KHR_swapchain_mutable_format": 1,
                 "VK_EXT_line_rasterization": 1,
                 "VK_EXT_pageable_device_local_memory": 1,
-                "VK_EXT_swapchain_maintenance1": 1
+                "VK_KHR_swapchain_maintenance1": 1
             },
             "features": {
                 "VkPhysicalDeviceFeatures": {
@@ -101,6 +103,12 @@
                 "VkPhysicalDevicePresentWaitFeaturesKHR": {
                     "presentWait": true
                 },
+                "VkPhysicalDevicePresentId2FeaturesKHR": {
+                    "presentId2": true
+                },
+                "VkPhysicalDevicePresentWait2FeaturesKHR": {
+                    "presentWait2": true
+                },
                 "VkPhysicalDeviceLineRasterizationFeaturesEXT": {
                     "rectangularLines": true,
                     "smoothLines": true
@@ -108,9 +116,6 @@
                 "VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT": {
                     "pageableDeviceLocalMemory": true
                 },
-                "VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT": {
-                    "swapchainMaintenance1": true
-                }
             }
         },
         "d3d9_baseline": {
