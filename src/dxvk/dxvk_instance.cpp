@@ -223,9 +223,9 @@ namespace dxvk {
 
   std::vector<DxvkExt*> DxvkInstance::getExtensionList(DxvkInstanceExtensions& ext, bool withDebug) {
     std::vector<DxvkExt*> result = {{
-      &ext.extSurfaceMaintenance1,
       &ext.khrGetSurfaceCapabilities2,
       &ext.khrSurface,
+      &ext.khrSurfaceMaintenance1,
     }};
 
     if (withDebug)

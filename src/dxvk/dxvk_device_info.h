@@ -67,7 +67,7 @@ namespace dxvk {
     VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT         extShaderModuleIdentifier;
     VkBool32                                                  extShaderStencilExport;
     VkBool32                                                  extSwapchainColorSpace;
-    VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT          extSwapchainMaintenance1;
+    VkPhysicalDeviceSwapchainMaintenance1FeaturesKHR          khrSwapchainMaintenance1;
     VkPhysicalDeviceTransformFeedbackFeaturesEXT              extTransformFeedback;
     VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT         extVertexAttributeDivisor;
     VkBool32                                                  khrExternalMemoryWin32;
@@ -77,6 +77,8 @@ namespace dxvk {
     VkPhysicalDeviceMaintenance7FeaturesKHR                   khrMaintenance7;
     VkPhysicalDevicePresentIdFeaturesKHR                      khrPresentId;
     VkPhysicalDevicePresentWaitFeaturesKHR                    khrPresentWait;
+    VkPhysicalDevicePresentId2FeaturesKHR                     khrPresentId2;
+    VkPhysicalDevicePresentWait2FeaturesKHR                   khrPresentWait2;
     VkBool32                                                  khrSwapchainMutableFormat;
     VkPhysicalDeviceDescriptorPoolOverallocationFeaturesNV    nvDescriptorPoolOverallocation;
     VkBool32                                                  nvLowLatency2;
