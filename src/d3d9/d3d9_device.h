@@ -1227,7 +1227,9 @@ namespace dxvk {
     /**
      * \brief Waits until the amount of used staging memory is below a certain threshold.
      */
-    void WaitStagingBuffer();
+    void ThrottleAllocation();
+
+    DxvkStagingBufferStats GetStagingMemoryStatistics() const;
 
     HRESULT               CreateShaderModule(
             D3D9CommonShader*     pShaderModule,
@@ -1497,6 +1499,9 @@ namespace dxvk {
     DxvkStagingBuffer               m_stagingBuffer;
     Rc<sync::Fence>                 m_stagingBufferFence;
     VkDeviceSize                    m_stagingMemorySignaled = 0ull;
+
+    VkDeviceSize                    m_discardMemoryCounter = 0u;
+    VkDeviceSize                    m_discardMemoryOnFlush = 0u;
 
     D3D9Cursor                      m_cursor;
 
