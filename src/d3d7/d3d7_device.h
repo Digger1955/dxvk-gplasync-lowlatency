@@ -183,6 +183,11 @@ namespace dxvk {
 
     inline HRESULT EnumerateBackBuffers(IDirectDrawSurface7* surface);
 
+    inline void RefreshLastUsedDevice() {
+      if (unlikely(m_parent->GetLastUsedDevice() != this))
+        m_parent->SetLastUsedDevice(this);
+    }
+
     inline void UploadIndices(d3d9::IDirect3DIndexBuffer9* ib9, WORD* indices, DWORD indexCount);
 
     inline bool ShouldRecord() const { return m_recorder != nullptr; }
@@ -212,6 +217,7 @@ namespace dxvk {
     Com<DDraw7Surface, false>     m_rtOrig;
     DDraw7Surface*                m_ds = nullptr;
 
+    Com<d3d9::IDirect3DSurface9>  m_fallBackBuffer;
     std::unordered_map<IDirectDrawSurface7*, Com<d3d9::IDirect3DSurface9>> m_backBuffers;
 
     std::array<Com<DDraw7Surface, false>, caps7::TextureStageCount> m_textures;
@@ -232,9 +238,8 @@ namespace dxvk {
 
     // Common index buffers used for indexed draws, split up into five sizes:
     // XS, S, M, L and XL, corresponding to 0.5 kb, 2 kb, 8 kb, 32 kb and 128 kb
-    UINT     m_ib9_indexCount[caps7::IndexBufferCount] = {256, 1024, 4096, 16384, D3DMAXNUMVERTICES};
-    uint32_t m_ib9_uploads[caps7::IndexBufferCount] = {};
     std::array<Com<d3d9::IDirect3DIndexBuffer9>, caps7::IndexBufferCount> m_ib9;
+    uint32_t m_ib9_uploads[caps7::IndexBufferCount] = {};
 
   };
 

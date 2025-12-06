@@ -11,15 +11,6 @@
 
 namespace dxvk {
 
-  struct CubeMapAttachedSurfaces {
-    IDirectDrawSurface7* positiveX = nullptr;
-    IDirectDrawSurface7* negativeX = nullptr;
-    IDirectDrawSurface7* positiveY = nullptr;
-    IDirectDrawSurface7* negativeY = nullptr;
-    IDirectDrawSurface7* positiveZ = nullptr;
-    IDirectDrawSurface7* negativeZ = nullptr;
-  };
-
   class DDraw7Surface final : public DDrawWrappedObject<DDraw7Interface, IDirectDrawSurface7, d3d9::IDirect3DSurface9> {
 
   public:
@@ -135,8 +126,12 @@ namespace dxvk {
       return m_d3d7Device;
     }
 
-    d3d9::IDirect3DTexture9* GetTexture() const {
+    d3d9::IDirect3DTexture9* GetD3D9Texture() const {
       return m_texture.ptr();
+    }
+
+    d3d9::IDirect3DCubeTexture9* GetD3D9CubeTexture() const {
+      return m_cubeMap.ptr();
     }
 
     bool IsTextureOrCubeMap() const {
@@ -188,6 +183,11 @@ namespace dxvk {
       m_dirtyMipMaps = false;
     }
 
+    bool IsBound() const {
+      const bool isParentBound = m_parentSurf != nullptr ? m_parentSurf->IsBound() : false;
+      return m_isBound || isParentBound;
+    }
+
     void UpdateBoundState(bool isBound) {
       m_isBound = isBound;
     }
@@ -200,10 +200,6 @@ namespace dxvk {
 
     inline bool IsAttached() const {
       return m_parentSurf != nullptr;
-    }
-
-    inline bool IsBound() const {
-      return m_isBound;
     }
 
     inline bool IsComplex() const {
@@ -251,6 +247,10 @@ namespace dxvk {
       return m_desc.ddsCaps.dwCaps & DDSCAPS_OVERLAY;
     }
 
+    inline bool IsManaged() const {
+      return m_desc.ddsCaps.dwCaps2 & DDSCAPS2_TEXTUREMANAGE;
+    }
+
     inline void InitializeAndAttachCubeFace(
         IDirectDrawSurface7* surf,
         d3d9::IDirect3DCubeTexture9* cubeTex9,
@@ -262,14 +262,16 @@ namespace dxvk {
 
     inline void RefreshD3D7Device() {
       D3D7Device* d3d7Device = m_parent->GetD3D7Device();
-      // Check if the device has been recreated and reset all D3D9 resources
-      if (unlikely(m_d3d7Device != nullptr && m_d3d7Device != d3d7Device)) {
-        Logger::info("RefreshD3D7Device: device context has changed, clearing all D3D9 resources");
-        m_texture = nullptr;
-        m_cubeMap = nullptr;
-        m_d3d9 = nullptr;
+      if (unlikely(m_d3d7Device != d3d7Device)) {
+        // Check if the device has been recreated and reset all D3D9 resources
+        if (unlikely(m_d3d7Device != nullptr)) {
+          Logger::debug("IDirectDrawSurface7::RefreshD3D7Device: Device context has changed, clearing all D3D9 resources");
+          m_cubeMap = nullptr;
+          m_texture = nullptr;
+          m_d3d9 = nullptr;
+        }
+        m_d3d7Device = d3d7Device;
       }
-      m_d3d7Device = d3d7Device;
     }
 
     inline void ListSurfaceDetails() const {

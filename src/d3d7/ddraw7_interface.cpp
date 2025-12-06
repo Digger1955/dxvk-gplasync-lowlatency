@@ -2,7 +2,6 @@
 
 #include "d3d7_device.h"
 #include "ddraw7_surface.h"
-#include "ddraw7_palette.h"
 
 #include <algorithm>
 
@@ -12,16 +11,16 @@ namespace dxvk {
 
   DDraw7Interface::DDraw7Interface(Com<IDirectDraw7>&& proxyIntf)
     : DDrawWrappedObject<IUnknown, IDirectDraw7, IUnknown>(nullptr, std::move(proxyIntf), nullptr) {
-    m_intfCount = ++s_intfCount;
-
-    Logger::debug(str::format("DDraw7Interface: Created a new interface nr. <<", m_intfCount, ">>"));
-
     // Initialize the IDirect3D7 interlocked object
     void* d3d7IntfProxiedVoid = nullptr;
     // This can never reasonably fail
     m_proxy->QueryInterface(__uuidof(IDirect3D7), &d3d7IntfProxiedVoid);
     Com<IDirect3D7> d3d7IntfProxied = static_cast<IDirect3D7*>(d3d7IntfProxiedVoid);
     m_d3d7Intf = new D3D7Interface(std::move(d3d7IntfProxied), this);
+
+    m_intfCount = ++s_intfCount;
+
+    Logger::debug(str::format("DDraw7Interface: Created a new interface nr. <<", m_intfCount, ">>"));
   }
 
   DDraw7Interface::~DDraw7Interface() {
@@ -60,10 +59,11 @@ namespace dxvk {
     if (riid == __uuidof(IDirect3D7)) {
       *ppvObject = m_d3d7Intf.ref();
       return S_OK;
+    }
     // Some games query for legacy ddraw interfaces
-    } else if (unlikely(riid == __uuidof(IDirectDraw)
-                     || riid == __uuidof(IDirectDraw2)
-                     || riid == __uuidof(IDirectDraw4))) {
+    if (unlikely(riid == __uuidof(IDirectDraw)
+              || riid == __uuidof(IDirectDraw2)
+              || riid == __uuidof(IDirectDraw4))) {
       Logger::warn("DDraw7Interface::QueryInterface: Query for legacy IDirectDraw");
       return m_proxy->QueryInterface(riid, ppvObject);
     }
@@ -78,14 +78,34 @@ namespace dxvk {
     }
   }
 
+  // The documentation states: "The IDirectDraw7::Compact method is not currently implemented."
   HRESULT STDMETHODCALLTYPE DDraw7Interface::Compact() {
-    Logger::debug("<<< DDraw7Interface::Compact: Proxy");
-    return m_proxy->Compact();
+    Logger::debug(">>> DDraw7Interface::Compact");
+    return DD_OK;
   }
 
   HRESULT STDMETHODCALLTYPE DDraw7Interface::CreateClipper(DWORD dwFlags, LPDIRECTDRAWCLIPPER *lplpDDClipper, IUnknown *pUnkOuter) {
-    Logger::debug("<<< DDraw7Interface::CreateClipper: Proxy");
+    Logger::debug(">>> DDraw7Interface::CreateClipper");
+    // Note: Unfortunately, if we wrap clippers, WineD3D's ddraw will crash on an assert,
+    // as it expects the vtable to correspond to its internal clipper implementation
     return m_proxy->CreateClipper(dwFlags, lplpDDClipper, pUnkOuter);
+
+    /*if (unlikely(lplpDDClipper == nullptr))
+      return DDERR_INVALIDPARAMS;
+
+    InitReturnPtr(lplpDDClipper);
+
+    Com<IDirectDrawClipper> lplpDDClipperProxy;
+    HRESULT hr = m_proxy->CreateClipper(dwFlags, &lplpDDClipperProxy, pUnkOuter);
+
+    if (likely(SUCCEEDED(hr))) {
+      *lplpDDClipper = ref(new DDraw7Clipper(std::move(lplpDDClipperProxy), this));
+    } else {
+      Logger::err("DDraw7Interface::CreateClipper: Failed to create proxy clipper");
+      return hr;
+    }
+
+    return DD_OK;*/
   }
 
   HRESULT STDMETHODCALLTYPE DDraw7Interface::CreatePalette(DWORD dwFlags, LPPALETTEENTRY lpColorTable, LPDIRECTDRAWPALETTE *lplpDDPalette, IUnknown *pUnkOuter) {
@@ -257,7 +277,7 @@ namespace dxvk {
     HRESULT hr = m_proxy->GetGDISurface(&gdiSurface);
 
     if (unlikely(FAILED(hr))) {
-      Logger::err("DDraw7Interface::GetGDISurface: Failed to retrieve GDI surface");
+      Logger::debug("DDraw7Interface::GetGDISurface: Failed to retrieve GDI surface");
       return hr;
     }
 
@@ -325,6 +345,7 @@ namespace dxvk {
 
   HRESULT STDMETHODCALLTYPE DDraw7Interface::SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwRefreshRate, DWORD dwFlags) {
     Logger::debug("<<< DDraw7Interface::SetDisplayMode: Proxy");
+    // TODO: Consider resetting the D3D9 swapchain in such cases, if we are in a full screen mode
     return m_proxy->SetDisplayMode(dwWidth, dwHeight, dwBPP, dwRefreshRate, dwFlags);
   }
 
@@ -338,7 +359,7 @@ namespace dxvk {
     if (likely(!m_d3d7Intf->GetOptions()->forceProxiedPresent)) {
       // Switch to a default presentation interval when an application
       // tries to wait for vertical blank, if we're not already doing so
-      D3D7Device* d3d7Device = m_d3d7Intf->GetDevice();
+      D3D7Device* d3d7Device = m_d3d7Intf->GetLastUsedDevice();
       if (unlikely(d3d7Device != nullptr && !m_waitForVBlank)) {
         Logger::info("DDraw7Interface::WaitForVerticalBlank: Switching to D3DPRESENT_INTERVAL_DEFAULT for presentation");
 
@@ -364,7 +385,7 @@ namespace dxvk {
 
     constexpr DWORD Megabytes = 1024 * 1024;
 
-    D3D7Device* d3d7Device = m_d3d7Intf->GetDevice();
+    D3D7Device* d3d7Device = m_d3d7Intf->GetLastUsedDevice();
     if (likely(d3d7Device != nullptr)) {
       Logger::debug("DDraw7Interface::GetAvailableVidMem: Getting memory stats from D3D9");
 
@@ -497,6 +518,8 @@ namespace dxvk {
       auto it = std::find(m_surfaces.begin(), m_surfaces.end(), ddraw7Surface);
       if (likely(it != m_surfaces.end())) {
           m_surfaces.erase(it);
+      } else {
+        Logger::err("DDraw7Interface::RemoveWrappedSurface: Surface not found");
       }
     }
   }
