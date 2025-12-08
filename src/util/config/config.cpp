@@ -787,10 +787,9 @@ namespace dxvk {
     { R"(\\SR2_pc\.exe$)", {{
       { "d3d9.textureMemory",                  "0" },
     }} },
-    /* Witcher 1: Very long loading times         *
+    /* The Witcher (2007)                         *
      * Inventory hair explosion at very high fps  */
     { R"(\\witcher\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
       { "d3d9.maxFrameRate",                 "300" },
     }} },
     /* Guitar Hero World Tour                     *
@@ -1155,7 +1154,6 @@ namespace dxvk {
     }} },
     /* Motor City Online                          */
     { R"(\\MCity_d\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
       { "d3d8.batching",                    "True" },
     }} },
     /* Railroad Tycoon 3                          */
@@ -1172,7 +1170,6 @@ namespace dxvk {
     /* Need for Speed III: Hot Pursuit            *
      * (with the "Modern Patch")                  */
     { R"(\\nfs3\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
       { "d3d8.batching",                    "True" },
     }} },
     /* Need for Speed: High Stakes / Road         *
@@ -1180,7 +1177,6 @@ namespace dxvk {
      * Won't actually render anything in game     *
      * without a memory limit in place            */
     { R"(\\nfs4\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
       { "d3d9.memoryTrackTest",             "True" },
       { "d3d9.maxAvailableMemory",          "1024" },
       { "d3d8.batching",                    "True" },
@@ -1189,9 +1185,10 @@ namespace dxvk {
     { R"(\\NFSHP2\.exe$)", {{
       { "d3d9.cachedWriteOnlyBuffers",      "True" },
     }} },
-    /* Project I.G.I. 2: Covert Strike            */
+    /* Project I.G.I. 2: Covert Strike            *
+     * Very stuttery frametime with own framecap  */
     { R"(\\igi2\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
+      { "d3d9.maxFrameRate",                 "60" },
     }} },
     /* Treasure Planet: Battle at Procyon         *
      * Declares v5 as color but shader uses v6    */
@@ -1254,10 +1251,6 @@ namespace dxvk {
     /* Max Payne 1 - Stalls waiting for an index buffer */
     { R"(\\MaxPayne\.exe$)", {{
       { "d3d9.allowDirectBufferMapping",   "False" },
-    }} },
-    /* Z: Steel Soldiers                          */
-    { R"(\\z2\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
     }} },
     /* FIFA Football 2003                         */
     { R"(\\fifa2003(demo)?\.exe$)", {{
