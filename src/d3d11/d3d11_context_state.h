@@ -2,9 +2,12 @@
 
 #include <array>
 
+#include "d3d11_blend.h"
 #include "d3d11_buffer.h"
+#include "d3d11_depth_stencil.h"
 #include "d3d11_input_layout.h"
 #include "d3d11_query.h"
+#include "d3d11_rasterizer.h"
 #include "d3d11_sampler.h"
 #include "d3d11_shader.h"
 #include "d3d11_state.h"
@@ -101,7 +104,7 @@ namespace dxvk {
    * Stores bound samplers.
    */
   struct D3D11ShaderStageSamplerBinding {
-    std::array<D3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> samplers = { };
+    std::array<Com<D3D11SamplerState, false>, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> samplers = { };
 
     uint32_t maxCount = 0;
 
@@ -189,8 +192,8 @@ namespace dxvk {
     D3D11RenderTargetViewBinding      rtvs  = { };
     Com<D3D11DepthStencilView, false> dsv   = { };
     
-    D3D11BlendState*        cbState = nullptr;
-    D3D11DepthStencilState* dsState = nullptr;
+    Com<D3D11BlendState, false>        cbState = nullptr;
+    Com<D3D11DepthStencilState, false> dsState = nullptr;
     
     FLOAT blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
@@ -255,7 +258,7 @@ namespace dxvk {
     std::array<D3D11_VIEWPORT, D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE> viewports = { };
     std::array<D3D11_RECT,     D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE> scissors  = { };
     
-    D3D11RasterizerState* state = nullptr;
+    Com<D3D11RasterizerState, false> state;
 
     void reset() {
       for (uint32_t i = 0; i < numViewports; i++)
