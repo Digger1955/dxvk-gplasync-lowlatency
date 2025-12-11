@@ -1361,10 +1361,6 @@ namespace dxvk {
       { "d3d9.cachedWriteOnlyBuffers",      "True" },
       { "d3d9.maxFrameRate",                  "60" },
     }} },
-    /* Emperor: Battle for Dune - Performance     */
-    { R"(\\Emperor.*Dune\\Game\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
-    }} },
     /* Battle Isle: The Andosia War - Performance *
      * and black screen prevention on startup,    *
      * also capped to prevent scroll speed issues */
@@ -1375,7 +1371,6 @@ namespace dxvk {
     }} },
     /* Startopia - Indexed draw performance       */
     { R"(\\startopia\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
       { "d3d7.forceProxiedPresent",         "True" },
     }} },
     /* Escape from Monkey Island                  *
@@ -1389,11 +1384,6 @@ namespace dxvk {
     /* Sacred - Fixes missing text                */
     { R"(\\Sacred\.exe$)", {{
       { "d3d7.proxiedGetDC",                "True" },
-    }} },
-    /* Hostile Waters: Antaeus Rising             *
-     * Vastly improves performance                */
-    { R"(\\HostileWaters\.exe$)", {{
-      { "d3d9.cachedWriteOnlyBuffers",      "True" },
     }} },
     /* Gothic 1 - broken physics and              *
      * flickering on the loading screen           */
@@ -1580,6 +1570,10 @@ namespace dxvk {
      * Fixes missing mip maps on car models       */
     { R"(\\(Porsche|nfs5)\.exe$)", {{
       { "d3d7.autoGenMipMaps",              "True" },
+    }} },
+    /* Soulbringer - Uses legacy ddraw interfaces */
+    { R"(\\SoulbringeVC(noeax)?\.exe$)", {{
+      { "d3d7.forceProxiedPresent",         "True" },
     }} },
 
   };
