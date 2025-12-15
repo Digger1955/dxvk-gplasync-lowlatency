@@ -92,6 +92,32 @@ namespace dxvk {
     return m_parent->GetInterface(riid);
   }
 
+  HRESULT STDMETHODCALLTYPE D3D7Device::QueryInterface(REFIID riid, void** ppvObject) {
+    if (unlikely(ppvObject == nullptr))
+      return E_POINTER;
+
+    InitReturnPtr(ppvObject);
+
+    if (likely(m_parent->GetOptions()->legacyQueryInterface)) {
+      // Some games query for legacy ddraw interfaces
+      if (unlikely(riid == __uuidof(IDirectDraw)
+                || riid == __uuidof(IDirectDraw2)
+                || riid == __uuidof(IDirectDraw4))) {
+        Logger::warn("D3D7Device::QueryInterface: Query for legacy IDirectDraw");
+        return m_proxy->QueryInterface(riid, ppvObject);
+      }
+    }
+
+    try {
+      *ppvObject = ref(this->GetInterface(riid));
+      return S_OK;
+    } catch (const DxvkError& e) {
+      Logger::warn(e.message());
+      Logger::warn(str::format(riid));
+      return E_NOINTERFACE;
+    }
+  }
+
   HRESULT STDMETHODCALLTYPE D3D7Device::GetCaps(D3DDEVICEDESC7 *desc) {
     Logger::debug(">>> D3D7Device::GetCaps");
 
@@ -1185,7 +1211,6 @@ namespace dxvk {
       if (likely(SUCCEEDED(hr))) {
         if (m_textures[stage] != nullptr) {
           Logger::debug("D3D7Device::SetTexture: Unbinding local texture");
-          m_textures[stage]->UpdateBoundState(false);
           m_textures[stage] = nullptr;
         }
       } else {
@@ -1205,11 +1230,6 @@ namespace dxvk {
 
     DDraw7Surface* surface7 = static_cast<DDraw7Surface*>(surface);
 
-    // If the same texture is already bound, then any lock/blit
-    // calls would have done an upload anyway, so return here
-    if (unlikely(m_textures[stage] == surface7))
-      return D3D_OK;
-
     // Only upload textures if any sort of blit/lock operation
     // has been performed on them since the last SetTexture call
     if (surface7->HasDirtyMipMaps()) {
@@ -1223,6 +1243,9 @@ namespace dxvk {
     } else {
       Logger::debug("D3D7Device::SetTexture: Skipping upload of texture and mip maps");
     }
+
+    if (unlikely(m_textures[stage] == surface7))
+      return D3D_OK;
 
     d3d9::IDirect3DTexture9* tex9 = surface7->GetD3D9Texture();
 
@@ -1243,7 +1266,6 @@ namespace dxvk {
     }
 
     m_textures[stage] = surface7;
-    m_textures[stage]->UpdateBoundState(true);
 
     return D3D_OK;
   }

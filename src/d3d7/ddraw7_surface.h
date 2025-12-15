@@ -183,15 +183,6 @@ namespace dxvk {
       m_dirtyMipMaps = false;
     }
 
-    bool IsBound() const {
-      const bool isParentBound = m_parentSurf != nullptr ? m_parentSurf->IsBound() : false;
-      return m_isBound || isParentBound;
-    }
-
-    void UpdateBoundState(bool isBound) {
-      m_isBound = isBound;
-    }
-
     HRESULT InitializeD3D9RenderTarget();
 
     HRESULT InitializeOrUploadD3D9();
@@ -265,7 +256,7 @@ namespace dxvk {
       if (unlikely(m_d3d7Device != d3d7Device)) {
         // Check if the device has been recreated and reset all D3D9 resources
         if (unlikely(m_d3d7Device != nullptr)) {
-          Logger::debug("IDirectDrawSurface7::RefreshD3D7Device: Device context has changed, clearing all D3D9 resources");
+          Logger::debug("DDraw7Surface: Device context has changed, clearing all D3D9 resources");
           m_cubeMap = nullptr;
           m_texture = nullptr;
           m_d3d9 = nullptr;
@@ -302,7 +293,6 @@ namespace dxvk {
     }
 
     bool             m_isChildObject = false;
-    bool             m_isBound       = false;
     bool             m_dirtyMipMaps  = false;
     uint32_t         m_mipCount      = 0;
 

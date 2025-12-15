@@ -90,23 +90,28 @@ namespace dxvk {
     if (unlikely(riid == __uuidof(IDirectDrawColorControl))) {
       return m_proxy->QueryInterface(riid, ppvObject);
     }
-    // Some games query for legacy ddraw surfaces
-    if (unlikely(riid == __uuidof(IDirectDrawSurface)
-              || riid == __uuidof(IDirectDrawSurface2)
-              || riid == __uuidof(IDirectDrawSurface3)
-              || riid == __uuidof(IDirectDrawSurface4))) {
-      Logger::warn("DDraw7Surface::QueryInterface: Query for legacy IDirectDrawSurface");
-      return m_proxy->QueryInterface(riid, ppvObject);
-    }
-    // Some games query for the legacy ddraw interface
-    if (unlikely(riid == __uuidof(IDirectDraw))) {
-      Logger::warn("DDraw7Surface::QueryInterface: Query for legacy IDirectDraw");
-      return m_proxy->QueryInterface(riid, ppvObject);
-    }
-    // Black & White queries for IDirect3DTexture2 for whatever reason...
-    if (unlikely(riid == __uuidof(IDirect3DTexture2))) {
-      Logger::warn("DDraw7Surface::QueryInterface: Query for legacy IDirect3DTexture");
-      return m_proxy->QueryInterface(riid, ppvObject);
+
+    if (likely(m_parent->GetOptions()->legacyQueryInterface)) {
+      // Some games query for legacy ddraw surfaces
+      if (unlikely(riid == __uuidof(IDirectDrawSurface)
+                || riid == __uuidof(IDirectDrawSurface2)
+                || riid == __uuidof(IDirectDrawSurface3)
+                || riid == __uuidof(IDirectDrawSurface4))) {
+        Logger::warn("DDraw7Surface::QueryInterface: Query for legacy IDirectDrawSurface");
+        return m_proxy->QueryInterface(riid, ppvObject);
+      }
+      // Some games query for legacy ddraw interfaces
+      if (unlikely(riid == __uuidof(IDirectDraw)
+                || riid == __uuidof(IDirectDraw2)
+                || riid == __uuidof(IDirectDraw4))) {
+        Logger::warn("DDraw7Surface::QueryInterface: Query for legacy IDirectDraw");
+        return m_proxy->QueryInterface(riid, ppvObject);
+      }
+      // Black & White queries for IDirect3DTexture2 for whatever reason...
+      if (unlikely(riid == __uuidof(IDirect3DTexture2))) {
+        Logger::warn("DDraw7Surface::QueryInterface: Query for legacy IDirect3DTexture");
+        return m_proxy->QueryInterface(riid, ppvObject);
+      }
     }
 
     try {
@@ -175,7 +180,7 @@ namespace dxvk {
     if (unlikely(!m_parent->IsWrappedSurface(lpDDSrcSurface))) {
       if (unlikely(lpDDSrcSurface != nullptr)) {
         // Gothic 1/2 spams this warning, but with proxiedQueryInterface it is expected behavior
-        if (likely(!m_d3d7Device->GetOptions()->proxiedQueryInterface)) {
+        if (likely(!m_parent->GetOptions()->proxiedQueryInterface)) {
           Logger::warn("DDraw7Surface::Blt: Received an unwrapped source surface");
         } else {
           Logger::debug("DDraw7Surface::Blt: Received an unwrapped source surface");
@@ -188,9 +193,8 @@ namespace dxvk {
     }
 
     if (likely(SUCCEEDED(hr))) {
-      // Textures and cubemaps get uploaded during SetTexture calls,
-      // unless they are already bound, and updates should be immediate
-      if (!IsTextureOrCubeMap() || IsBound()) {
+      // Textures and cubemaps get uploaded during SetTexture calls
+      if (!IsTextureOrCubeMap()) {
         HRESULT hrUpload = InitializeOrUploadD3D9();
         if (unlikely(FAILED(hrUpload)))
           Logger::warn("DDraw7Surface::Blt: Failed upload to d3d9 surface");
@@ -239,9 +243,8 @@ namespace dxvk {
     }
 
     if (likely(SUCCEEDED(hr))) {
-      // Textures and cubemaps get uploaded during SetTexture calls,
-      // unless they are already bound, and updates should be immediate
-      if (!IsTextureOrCubeMap() || IsBound()) {
+      // Textures and cubemaps get uploaded during SetTexture calls
+      if (!IsTextureOrCubeMap()) {
         HRESULT hrUpload = InitializeOrUploadD3D9();
         if (unlikely(FAILED(hrUpload)))
           Logger::warn("DDraw7Surface::BltFast: Failed upload to d3d9 surface");
@@ -437,7 +440,6 @@ namespace dxvk {
     } else {
       Logger::debug("DDraw7Surface::GetAttachedSurface: Got an existing wrapped surface");
       Com<DDraw7Surface> ddraw7Surface = static_cast<DDraw7Surface*>(surface.ptr());
-      // TODO: Should we ref here though?
       *lplpDDAttachedSurface = ddraw7Surface.ref();
     }
 
@@ -473,19 +475,26 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE DDraw7Surface::GetDC(HDC *lphDC) {
     Logger::debug(">>> DDraw7Surface::GetDC");
 
-    if (unlikely(m_parent->GetOptions()->proxiedGetDC ||
-                 m_parent->GetOptions()->forceProxiedPresent))
+    if (unlikely(m_parent->GetOptions()->forceProxiedPresent))
       return m_proxy->GetDC(lphDC);
-
-    if (unlikely(lphDC == nullptr))
-      return DDERR_INVALIDPARAMS;
-
-    InitReturnPtr(lphDC);
 
     if (unlikely(!IsInitialized())) {
       Logger::debug("DDraw7Surface::GetDC: Not yet initialized");
       return m_proxy->GetDC(lphDC);
     }
+
+    // Proxy GetDC calls if we haven't yet drawn and the surface is flippable
+    RefreshD3D7Device();
+    if (m_d3d7Device != nullptr && !(m_d3d7Device->HasDrawn() &&
+        (IsPrimarySurface() || IsFrontBuffer() || IsBackBufferOrFlippable()))) {
+      Logger::debug("DDraw7Surface::GetDC: Not yet drawn flippable surface");
+      return m_proxy->GetDC(lphDC);
+    }
+
+    if (unlikely(lphDC == nullptr))
+      return DDERR_INVALIDPARAMS;
+
+    InitReturnPtr(lphDC);
 
     HRESULT hr = m_d3d9->GetDC(lphDC);
     if (unlikely(FAILED(hr))) {
@@ -557,8 +566,7 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE DDraw7Surface::ReleaseDC(HDC hDC) {
     Logger::debug(">>> DDraw7Surface::ReleaseDC");
 
-    if (unlikely(m_parent->GetOptions()->proxiedGetDC ||
-                 m_parent->GetOptions()->forceProxiedPresent)) {
+    if (unlikely(m_parent->GetOptions()->forceProxiedPresent)) {
       if (IsTextureOrCubeMap())
         m_dirtyMipMaps = true;
       return m_proxy->ReleaseDC(hDC);
@@ -566,6 +574,16 @@ namespace dxvk {
 
     if (unlikely(!IsInitialized())) {
       Logger::debug("DDraw7Surface::ReleaseDC: Not yet initialized");
+      return m_proxy->ReleaseDC(hDC);
+    }
+
+    // Proxy ReleaseDC calls if we haven't yet drawn and the surface is flippable
+    RefreshD3D7Device();
+    if (m_d3d7Device != nullptr && !(m_d3d7Device->HasDrawn() &&
+       (IsPrimarySurface() || IsFrontBuffer() || IsBackBufferOrFlippable()))) {
+      Logger::debug("DDraw7Surface::ReleaseDC: Not yet drawn flippable surface");
+      if (IsTextureOrCubeMap())
+        m_dirtyMipMaps = true;
       return m_proxy->ReleaseDC(hDC);
     }
 
@@ -579,7 +597,15 @@ namespace dxvk {
 
   HRESULT STDMETHODCALLTYPE DDraw7Surface::Restore() {
     Logger::debug("<<< DDraw7Surface::Restore: Proxy");
-    return m_proxy->Restore();
+
+    HRESULT hr = m_proxy->Restore();
+    if (unlikely(FAILED(hr)))
+      return hr;
+
+    if (IsTextureOrCubeMap())
+      DirtyMipMaps();
+
+    return hr;
   }
 
   HRESULT STDMETHODCALLTYPE DDraw7Surface::SetClipper(LPDIRECTDRAWCLIPPER lpDDClipper) {
@@ -625,9 +651,8 @@ namespace dxvk {
     HRESULT hr = m_proxy->Unlock(lpSurfaceData);
 
     if (likely(SUCCEEDED(hr))) {
-      // Textures and cubemaps get uploaded during SetTexture calls,
-      // unless they are already bound, and updates should be immediate
-      if (!IsTextureOrCubeMap() || IsBound()) {
+      // Textures and cubemaps get uploaded during SetTexture calls
+      if (!IsTextureOrCubeMap()) {
         HRESULT hrUpload = InitializeOrUploadD3D9();
         if (unlikely(FAILED(hrUpload)))
           Logger::warn("DDraw7Surface::Unlock: Failed upload to d3d9 surface");
@@ -693,9 +718,16 @@ namespace dxvk {
   HRESULT STDMETHODCALLTYPE DDraw7Surface::SetSurfaceDesc(LPDDSURFACEDESC2 lpDDSD, DWORD dwFlags) {
     Logger::debug("<<< DDraw7Surface::SetSurfaceDesc: Proxy");
 
-    // can be used only to set the surface data and pixel format
+    // Can be used only to set the surface data and pixel format
     // used by an explicit system-memory surface (will be validated)
     HRESULT hr = m_proxy->SetSurfaceDesc(lpDDSD, dwFlags);
+    if (unlikely(FAILED(hr)))
+      return hr;
+
+    // Update the new surface description
+    m_desc = { };
+    m_desc.dwSize = sizeof(DDSURFACEDESC2);
+    m_proxy->GetSurfaceDesc(&m_desc);
 
     // update the new surface description
     if (likely(SUCCEEDED(hr))) {
@@ -814,16 +846,24 @@ namespace dxvk {
     Com<DDraw7Surface> face7;
     if (likely(!m_parent->IsWrappedSurface(surf))) {
       Com<IDirectDrawSurface7> wrappedFace = surf;
-      face7 = new DDraw7Surface(std::move(wrappedFace), m_parent, this, false);
+      try {
+        face7 = new DDraw7Surface(std::move(wrappedFace), m_parent, this, false);
+      } catch (const DxvkError& e) {
+        Logger::err("InitializeAndAttachCubeFace: Failed to create wrapped cube face surface");
+        Logger::err(e.message());
+      }
     } else {
       face7 = static_cast<DDraw7Surface*>(surf);
     }
-    Com<d3d9::IDirect3DSurface9> face9;
-    cubeTex9->GetCubeMapSurface(face, 0, &face9);
-    face7->SetD3D9(std::move(face9));
-    m_attachedSurfaces.emplace(std::piecewise_construct,
-                               std::forward_as_tuple(face7->GetProxied()),
-                               std::forward_as_tuple(face7.ptr()));
+
+    if (likely(face7 != nullptr)) {
+      Com<d3d9::IDirect3DSurface9> face9;
+      cubeTex9->GetCubeMapSurface(face, 0, &face9);
+      face7->SetD3D9(std::move(face9));
+      m_attachedSurfaces.emplace(std::piecewise_construct,
+                                std::forward_as_tuple(face7->GetProxied()),
+                                std::forward_as_tuple(face7.ptr()));
+    }
   }
 
   inline HRESULT DDraw7Surface::IntializeD3D9(const bool initRT) {
@@ -891,7 +931,7 @@ namespace dxvk {
 
     IDirectDrawSurface7* mipMap = m_proxy.ptr();
 
-    m_mipCount++;
+    m_mipCount = 1;
     while (mipMap != nullptr) {
       IDirectDrawSurface7* parentSurface = mipMap;
       mipMap = nullptr;
