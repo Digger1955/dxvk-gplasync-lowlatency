@@ -1635,6 +1635,9 @@ namespace dxvk {
             VkDeviceSize              subresourceAlignment,
             VkDeviceSize              sourceOffset);
 
+    VkAttachmentStoreOp determineClearStoreOp(
+            VkAttachmentLoadOp        loadOp) const;
+
     void performClear(
       const Rc<DxvkImageView>&        imageView,
             int32_t                   attachmentIndex,

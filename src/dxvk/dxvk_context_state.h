@@ -135,6 +135,8 @@ namespace dxvk {
     DxvkRenderPassOps   renderPassOps;
     DxvkFramebufferInfo framebufferInfo;
     DxvkAttachmentMask  attachmentMask;
+    VkOffset2D          renderAreaLo = { };
+    VkOffset2D          renderAreaHi = { };
   };
 
 

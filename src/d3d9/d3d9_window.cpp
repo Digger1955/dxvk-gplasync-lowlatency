@@ -151,6 +151,10 @@ namespace dxvk
         it->second.deactivateProcessed = !processed;
       }
   }
+
+  void ActivateFocusWindow(HWND window) {
+      SetWindowPos(window, nullptr, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+  }
 #else
   D3D9WindowMessageFilter::D3D9WindowMessageFilter(HWND window, bool filter) {
 
@@ -170,6 +174,10 @@ namespace dxvk
 
   void SetActivateProcessed(HWND window, bool processed) {
   }
+
+  void ActivateFocusWindow(HWND window) {
+  }
+
 #endif
 
 }
