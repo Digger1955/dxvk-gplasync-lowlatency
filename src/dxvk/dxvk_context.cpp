@@ -7143,6 +7143,7 @@ namespace dxvk {
         m_state.om.renderAreaHi = {
           std::max(m_state.om.renderAreaHi.x, int32_t(dst.offset.x + dst.extent.width)),
           std::max(m_state.om.renderAreaHi.y, int32_t(dst.offset.y + dst.extent.height)) };
+      }
 
       m_cmd->cmdSetViewport(m_state.vp.viewportCount, m_state.vp.viewports.data());
       m_cmd->cmdSetScissor(m_state.vp.viewportCount, clampedScissors.data());
