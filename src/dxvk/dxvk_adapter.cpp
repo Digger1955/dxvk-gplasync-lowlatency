@@ -240,6 +240,8 @@ namespace dxvk {
         && CHECK_FEATURE_NEED(vk13.dynamicRendering)
         && CHECK_FEATURE_NEED(vk13.maintenance4)
         && CHECK_FEATURE_NEED(extAttachmentFeedbackLoopLayout.attachmentFeedbackLoopLayout)
+        && CHECK_FEATURE_NEED(extBorderColorSwizzle.borderColorSwizzle)
+        && CHECK_FEATURE_NEED(extBorderColorSwizzle.borderColorSwizzleFromImage)
         && CHECK_FEATURE_NEED(extConservativeRasterization)
         && CHECK_FEATURE_NEED(extCustomBorderColor.customBorderColors)
         && CHECK_FEATURE_NEED(extCustomBorderColor.customBorderColorWithoutFormat)
@@ -1087,6 +1089,7 @@ namespace dxvk {
       &devExtensions.amdMemoryOverallocationBehaviour,
       &devExtensions.amdShaderFragmentMask,
       &devExtensions.extAttachmentFeedbackLoopLayout,
+      &devExtensions.extBorderColorSwizzle,
       &devExtensions.extConservativeRasterization,
       &devExtensions.extCustomBorderColor,
       &devExtensions.extDepthClipEnable,
