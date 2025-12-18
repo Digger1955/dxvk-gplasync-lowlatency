@@ -592,6 +592,10 @@ namespace dxvk {
           enabledFeatures.extAttachmentFeedbackLoopLayout = *reinterpret_cast<const VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT*>(f);
           break;
 
+        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT:
+          enabledFeatures.extBorderColorSwizzle = *reinterpret_cast<const VkPhysicalDeviceBorderColorSwizzleFeaturesEXT*>(f);
+          break;
+
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT:
           enabledFeatures.extCustomBorderColor = *reinterpret_cast<const VkPhysicalDeviceCustomBorderColorFeaturesEXT*>(f);
           break;
@@ -892,6 +896,11 @@ namespace dxvk {
       m_deviceFeatures.extAttachmentFeedbackLoopLayout.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.extAttachmentFeedbackLoopLayout);
     }
 
+    if (m_deviceExtensions.supports(VK_EXT_BORDER_COLOR_SWIZZLE_EXTENSION_NAME)) {
+      m_deviceFeatures.extBorderColorSwizzle.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
+      m_deviceFeatures.extBorderColorSwizzle.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.extBorderColorSwizzle);
+    }
+
     if (m_deviceExtensions.supports(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME))
       m_deviceFeatures.extConservativeRasterization = VK_TRUE;
 
@@ -1146,6 +1155,11 @@ namespace dxvk {
       enabledFeatures.extAttachmentFeedbackLoopLayout.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.extAttachmentFeedbackLoopLayout);
     }
 
+    if (devExtensions.extBorderColorSwizzle) {
+      enabledFeatures.extBorderColorSwizzle.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
+      enabledFeatures.extBorderColorSwizzle.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.extBorderColorSwizzle);
+    }
+
     if (devExtensions.extConservativeRasterization)
       enabledFeatures.extConservativeRasterization = VK_TRUE;
 
@@ -1382,6 +1396,9 @@ namespace dxvk {
       "\n  extension supported                    : " << (features.amdShaderFragmentMask ? "1" : "0") <<
       "\n" << VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME <<
       "\n  attachmentFeedbackLoopLayout           : " << (features.extAttachmentFeedbackLoopLayout.attachmentFeedbackLoopLayout ? "1" : "0") <<
+      "\n" << VK_EXT_BORDER_COLOR_SWIZZLE_EXTENSION_NAME <<
+      "\n  borderColorSwizzle                     : " << (features.extBorderColorSwizzle.borderColorSwizzle ? "1" : "0") <<
+      "\n  borderColorSwizzleFromImage            : " << (features.extBorderColorSwizzle.borderColorSwizzleFromImage ? "1" : "0") <<
       "\n" << VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME <<
       "\n  extension supported                    : " << (features.extConservativeRasterization ? "1" : "0") <<
       "\n" << VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME <<
@@ -1455,9 +1472,9 @@ namespace dxvk {
       "\n" << VK_KHR_PRESENT_WAIT_EXTENSION_NAME <<
       "\n  presentWait                            : " << (features.khrPresentWait.presentWait ? "1" : "0") <<
       "\n" << VK_KHR_PRESENT_ID_2_EXTENSION_NAME <<
-      "\n  presentId2                              : " << (features.khrPresentId2.presentId2 ? "1" : "0") <<
+      "\n  presentId2                             : " << (features.khrPresentId2.presentId2 ? "1" : "0") <<
       "\n" << VK_KHR_PRESENT_WAIT_2_EXTENSION_NAME <<
-      "\n  presentWait2                            : " << (features.khrPresentWait2.presentWait2 ? "1" : "0") <<
+      "\n  presentWait2                           : " << (features.khrPresentWait2.presentWait2 ? "1" : "0") <<
       "\n" << VK_NV_DESCRIPTOR_POOL_OVERALLOCATION_EXTENSION_NAME <<
       "\n  descriptorPoolOverallocation           : " << (features.nvDescriptorPoolOverallocation.descriptorPoolOverallocation ? "1" : "0") <<
       "\n" << VK_NV_LOW_LATENCY_2_EXTENSION_NAME <<
