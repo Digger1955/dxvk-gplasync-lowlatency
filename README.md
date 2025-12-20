@@ -46,7 +46,7 @@ Contributing Guidelines provided in [Wiki](https://github.com/Digger1955/dxvk-gp
 ## How to use (Windows 10/11)
 
 1. Download DXVK package from [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page.
-2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency/tree/GPLALL-master-2.7?tab=readme-ov-file#dll-dependencies) to the location of application's main executable folder.
+2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency?tab=readme-ov-file#dll-dependencies) to the location of application's main executable folder.
 3. Run application.
 
 **Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
@@ -131,7 +131,7 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 - `scale=x`: Scales the HUD by a factor of `x` (e.g. `1.5`)
 - `opacity=y`: Adjusts the HUD opacity by a factor of `y` (e.g. `0.5`, `1.0` being fully opaque).
 - `renderlatency`: Start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. Note that this will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. Average over 100 frames.
-- `latencydetails`: provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to competely eliminate GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
+- `latencydetails`: provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to reduce GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
 
 Additionally, `DXVK_HUD=1` has the same effect as `DXVK_HUD=devinfo,fps`, and `DXVK_HUD=full` enables all available HUD elements.
 
@@ -234,7 +234,6 @@ Optimized for Variable Refresh Rate (VRR) displays, `VK_PRESENT_MODE_IMMEDIATE_K
 
 `dxvk.lowLatencyAllowCpuFramesOverlap` option in `dxvk.conf` controls whether a frame is allowed to begin before finishing processing the cpu-part of the previous one, when low-latency frame pacing is used. Snappiness may be improved when disallowing overlap. On the other hand, this might also decrease fps in certain cases. Default is `dxvk.lowLatencyAllowCpuFramesOverlap = True`
 
-
 ## Build instructions
 
 In order to pull in all submodules that are needed for building, clone the repository using the following command:
@@ -301,7 +300,7 @@ DXVK Native is a version of DXVK which allows it to be used natively without Win
 
 This is primarily useful for game and application ports to either avoid having to write another rendering backend, or to help with port bringup during development.
 
-[Release builds](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) are built using the Steam Runtime.
+[Release builds](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) are built using the Steam Runtime. 
 
 ### How does it work?
 
