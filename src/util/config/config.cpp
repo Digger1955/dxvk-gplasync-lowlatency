@@ -365,6 +365,11 @@ namespace dxvk {
     { R"(\\BFBC2Game\.exe$)", {{
       { "d3d11.floatControls",             "False" },
     }} },
+    /* The Evil Within 2 *
+    * Game speeds up above 120 fps */
+    { R"(\\TEW2\.exe$)", {{
+      { "dxgi.maxFrameRate",                 "120" },
+    }} },
     /* Sonic Frontiers - flickering shadows and   *
      * vegetation when GPU-bound                  */
     { R"(\\SonicFrontiers\.exe$)", {{
