@@ -113,11 +113,11 @@ namespace dxvk {
         return;
       }
 
-      time_point lastFrameFinish;
+      time_point lastFrameFinishPrediction;
 
       if (targetGpuTime < props.optimizedGpuTime) {
         m_gpuProgress.waitUntil( frameId-1, targetGpuTime, props.cpuUntilGpuStart );
-        lastFrameFinish = high_resolution_clock::now()
+        lastFrameFinishPrediction = high_resolution_clock::now()
           + microseconds(props.optimizedGpuTime - targetGpuTime);
       }
       else {
@@ -128,7 +128,7 @@ namespace dxvk {
       now = high_resolution_clock::now();
       int32_t cpuDelay = getCpuDelay( props, m, now );
       int32_t delay = std::max( cpuDelay, getFpsLimiterDelay( m, now ) );
-      delay = std::max( delay, getVrrDelay( frameId, props, now, lastFrameFinish ) );
+      delay = std::max( delay, getVrrDelay( frameId, props, now, lastFrameFinishPrediction ) );
       sleepFor( now, delay );
 
     }
