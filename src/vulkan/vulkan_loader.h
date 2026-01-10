@@ -168,6 +168,10 @@ namespace dxvk::vk {
     #ifdef VK_EXT_swapchain_maintenance1
     VULKAN_FN(vkReleaseSwapchainImagesEXT);
     #endif
+
+    #ifdef VK_EXT_sample_locations
+    VULKAN_FN(vkGetPhysicalDeviceMultisamplePropertiesEXT);
+    #endif
   };
   
   
