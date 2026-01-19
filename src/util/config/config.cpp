@@ -182,6 +182,16 @@ namespace dxvk {
     { R"(\\h2m-mod\.exe$)", {{
       { "dxgi.customVendorId",              "10de" },
     }} },
+    /* HMW-Mod - Modern Warfare Remastered        *
+     * AMD AGS crash                              */
+    { R"(\\hmw-mod\.exe$)", {{
+      { "dxgi.customVendorId",              "10de" },
+    }} },
+    /* Infinite Warfare                           *
+     * AMD AGS crash                              */
+    { R"(\\iw7(_ship|-mod)\.exe$)", {{
+      { "dxgi.customVendorId",              "10de" },
+    }} },
     /* Modern Warfare 2 Campaign Remastered       *
      * AMD AGS crash same as above                */
     { R"(\\MW2CR\.exe$)", {{
