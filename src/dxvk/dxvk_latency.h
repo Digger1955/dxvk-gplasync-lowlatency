@@ -222,6 +222,11 @@ namespace dxvk {
     virtual DxvkLatencyStats getStatistics(
             uint64_t                  frameId) = 0;
 
+    virtual VkQueryPool* allocSubmitQueryPool() { return nullptr; }
+
+    virtual void freeSubmitQueryPool(
+            VkQueryPool*              queryPool ) { }
+
   private:
 
     std::atomic<uint64_t> m_refCount = { 0u };
