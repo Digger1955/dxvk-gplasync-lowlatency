@@ -1001,6 +1001,9 @@ namespace dxvk {
       m_deviceFeatures.extVertexAttributeDivisor.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.extVertexAttributeDivisor);
     }
 
+    if (m_deviceExtensions.supports(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME))
+      m_deviceFeatures.extCalibratedTimestamps = VK_TRUE;
+
     if (m_deviceExtensions.supports(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME))
       m_deviceFeatures.khrExternalMemoryWin32 = VK_TRUE;
 
@@ -1112,6 +1115,7 @@ namespace dxvk {
       &devExtensions.khrSwapchainMaintenance1,
       &devExtensions.extTransformFeedback,
       &devExtensions.extVertexAttributeDivisor,
+      &devExtensions.extCalibratedTimestamps,
       &devExtensions.khrExternalMemoryWin32,
       &devExtensions.khrExternalSemaphoreWin32,
       &devExtensions.extLoadStoreOpNone,
@@ -1260,6 +1264,9 @@ namespace dxvk {
       enabledFeatures.extVertexAttributeDivisor.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT;
       enabledFeatures.extVertexAttributeDivisor.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.extVertexAttributeDivisor);
     }
+
+    if (devExtensions.extCalibratedTimestamps)
+      enabledFeatures.extCalibratedTimestamps = VK_TRUE;
 
     if (devExtensions.khrExternalMemoryWin32)
       enabledFeatures.khrExternalMemoryWin32 = VK_TRUE;
@@ -1460,6 +1467,8 @@ namespace dxvk {
       "\n" << VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME <<
       "\n  vertexAttributeInstanceRateDivisor     : " << (features.extVertexAttributeDivisor.vertexAttributeInstanceRateDivisor ? "1" : "0") <<
       "\n  vertexAttributeInstanceRateZeroDivisor : " << (features.extVertexAttributeDivisor.vertexAttributeInstanceRateZeroDivisor ? "1" : "0") <<
+      "\n" << VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME <<
+      "\n  extension supported                    : " << (features.extCalibratedTimestamps ? "1" : "0") <<
       "\n" << VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME <<
       "\n  extension supported                    : " << (features.khrExternalMemoryWin32 ? "1" : "0") <<
       "\n" << VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME <<

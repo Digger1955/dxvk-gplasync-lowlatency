@@ -71,6 +71,7 @@ namespace dxvk {
     VkPhysicalDeviceSwapchainMaintenance1FeaturesKHR          khrSwapchainMaintenance1;
     VkPhysicalDeviceTransformFeedbackFeaturesEXT              extTransformFeedback;
     VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT         extVertexAttributeDivisor;
+    VkBool32                                                  extCalibratedTimestamps;
     VkBool32                                                  khrExternalMemoryWin32;
     VkBool32                                                  khrExternalSemaphoreWin32;
     VkBool32                                                  extLoadStoreOpNone;

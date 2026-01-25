@@ -2,6 +2,7 @@
 #include "dxvk_framepacer_mode_low_latency.h"
 #include "dxvk_framepacer_mode_min_latency.h"
 #include "dxvk_options.h"
+#include "../dxvk_device.h"
 #include "../../util/util_flush.h"
 #include "../../util/util_env.h"
 #include "../../util/log/log.h"
@@ -13,12 +14,12 @@ namespace dxvk {
   }
 
 
-  FramePacer::FramePacer( const DxvkOptions& options, uint64_t firstFrameId )
-  : m_latencyMarkersStorage(firstFrameId) {
-    // We'll default to LOW_LATENCY in the draft-PR for now, for demonstration purposes,
-    // highlighting the generally much better input lag and time consistency.
-    // MAX_FRAME_LATENCY has advantages in some games that provide inconsistent
-    // cpu frametimes and is tuned for highest fps which can be relevant in benchmarks.
+  FramePacer::FramePacer( DxvkDevice* device, const DxvkOptions& options, uint64_t firstFrameId )
+  : m_latencyMarkersStorage(firstFrameId), m_device(device), m_calibratedDeviceTimestamps(device) {
+    // We'll default to LOW_LATENCY, which generally provides the best "input lag"
+    // along with time consistency and often appears the smoothest too.
+    // MAX_FRAME_LATENCY can have advantages in some games like God of War that provide inconsistent
+    // cpu frametimes. Also, it's tuned for highest fps which can be relevant in benchmarks.
     FramePacerMode::Mode mode = FramePacerMode::LOW_LATENCY;
     int refreshRate = 0;
 
@@ -100,12 +101,48 @@ namespace dxvk {
     m_frameSync.signalRenderFinished ( firstFrameId-1 );
     m_frameSync.signalFrameFinished  ( firstFrameId-1 );
     m_frameSync.signalCsFinished     ( firstFrameId );
+
+    if (true) {
+      VkQueryPoolCreateInfo queryPoolInfo = {};
+      queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+      queryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+      queryPoolInfo.queryCount = 1;
+
+      VkQueryPool* queryPools = m_queryPools.getDataUnsafe();
+      for (int i=0; i<256; ++i) {
+        VkResult res = device->vkd()->vkCreateQueryPool(device->handle(), &queryPoolInfo, nullptr, &queryPools[i]);
+
+        if (res != VK_SUCCESS)
+          throw DxvkError("FramePacer: Failed to create submit query pool");
+      }
+    }
   }
 
 
   FramePacer::~FramePacer() {
     delete m_presentationStats.load();
     delete m_gpuBufferStats.load();
+
+    if (true) {
+      for (int i=0; i<256; ++i) {
+        // calling queryPool.alloc() ensures it's not in use
+        m_device->vkd()->vkDestroyQueryPool(m_device->handle(), *m_queryPools.alloc(), nullptr);
+      }
+    }
+  }
+
+
+  VkResult FramePacer::getSubmitQueryPoolResult( VkQueryPool* queryPool, uint64_t* timestamp ) {
+    VkQueryResultFlags flags = VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT;
+    VkResult res = m_device->vkd()->vkGetQueryPoolResults(
+      m_device->handle(), *queryPool, 0, 1, sizeof(uint64_t),
+      timestamp, sizeof(uint64_t), flags
+    );
+
+    if (unlikely(res != VK_SUCCESS))
+      Logger::err( str::format( "FramePacer: vkGetQueryPoolResults returned ", res) );
+
+    return res;
   }
 
 }
