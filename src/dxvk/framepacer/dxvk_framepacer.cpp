@@ -2,6 +2,7 @@
 #include "dxvk_framepacer_mode_low_latency.h"
 #include "dxvk_framepacer_mode_min_latency.h"
 #include "dxvk_options.h"
+#include "../dxvk_device.h"
 #include "../../util/util_flush.h"
 #include "../../util/util_env.h"
 #include "../../util/log/log.h"
@@ -13,12 +14,12 @@ namespace dxvk {
   }
 
 
-  FramePacer::FramePacer( const DxvkOptions& options, uint64_t firstFrameId )
-  : m_latencyMarkersStorage(firstFrameId) {
-    // We'll default to LOW_LATENCY in the draft-PR for now, for demonstration purposes,
-    // highlighting the generally much better input lag and time consistency.
-    // MAX_FRAME_LATENCY has advantages in some games that provide inconsistent
-    // cpu frametimes and is tuned for highest fps which can be relevant in benchmarks.
+  FramePacer::FramePacer( DxvkDevice* device, const DxvkOptions& options, uint64_t firstFrameId )
+  : m_latencyMarkersStorage(firstFrameId), m_device(device), m_calibratedDeviceTimestamps(device) {
+    // We'll default to LOW_LATENCY, which generally provides the best "input lag"
+    // along with time consistency and often appears the smoothest too.
+    // MAX_FRAME_LATENCY can have advantages in some games like God of War that provide inconsistent
+    // cpu frametimes. Also, it's tuned for highest fps which can be relevant in benchmarks.
     FramePacerMode::Mode mode = FramePacerMode::LOW_LATENCY;
     int refreshRate = 0;
 
@@ -51,28 +52,31 @@ namespace dxvk {
     switch (mode) {
       case FramePacerMode::MAX_FRAME_LATENCY:
         Logger::info( "Frame pace: max-frame-latency" );
-        m_mode = std::make_unique<FramePacerMode>(FramePacerMode::MAX_FRAME_LATENCY, &m_latencyMarkersStorage, firstFrameId);
+        m_frameSync.m_waitIsActive = false;
+        m_frameSync.m_signalIsActive = false;
+        m_mode = std::make_unique<FramePacerMode>(FramePacerMode::MAX_FRAME_LATENCY, "max-frame-latency", &m_latencyMarkersStorage, &m_frameSync, firstFrameId);
         break;
 
       case FramePacerMode::LOW_LATENCY:
         Logger::info( "Frame pace: low-latency" );
         GpuFlushTracker::m_minPendingSubmissions = 1;
         GpuFlushTracker::m_minChunkCount = 1;
-        m_mode = std::make_unique<LowLatencyMode>(mode, &m_latencyMarkersStorage, options, firstFrameId);
+        m_mode = std::make_unique<LowLatencyMode>(mode, &m_latencyMarkersStorage, &m_frameSync, options, firstFrameId);
         break;
 
       case FramePacerMode::LOW_LATENCY_VRR:
         Logger::info( "Frame pace: low-latency-vrr" );
         GpuFlushTracker::m_minPendingSubmissions = 1;
         GpuFlushTracker::m_minChunkCount = 1;
-        m_mode = std::make_unique<LowLatencyMode>(mode, &m_latencyMarkersStorage, options, firstFrameId, refreshRate);
+        m_mode = std::make_unique<LowLatencyMode>(mode, &m_latencyMarkersStorage, &m_frameSync, options, firstFrameId, refreshRate);
         break;
 
       case FramePacerMode::MIN_LATENCY:
         Logger::info( "Frame pace: min-latency" );
         GpuFlushTracker::m_minPendingSubmissions = 1;
         GpuFlushTracker::m_minChunkCount = 1;
-        m_mode = std::make_unique<MinLatencyMode>(mode, &m_latencyMarkersStorage, firstFrameId);
+        m_frameSync.m_waitLatency = 1;
+        m_mode = std::make_unique<MinLatencyMode>(mode, &m_latencyMarkersStorage, &m_frameSync, firstFrameId);
         break;
     }
 
@@ -93,16 +97,52 @@ namespace dxvk {
     timeline.gpuFinished.store   ( firstFrameId-1 );
     timeline.frameFinished.store ( firstFrameId-1 );
 
-    m_mode->signalGpuStart       ( firstFrameId-1 );
-    m_mode->signalRenderFinished ( firstFrameId-1 );
-    m_mode->signalFrameFinished  ( firstFrameId-1 );
-    m_mode->signalCsFinished     ( firstFrameId );
+    m_frameSync.signalGpuStart       ( firstFrameId-1 );
+    m_frameSync.signalRenderFinished ( firstFrameId-1 );
+    m_frameSync.signalFrameFinished  ( firstFrameId-1 );
+    m_frameSync.signalCsFinished     ( firstFrameId );
+
+    if (m_calibratedDeviceTimestamps.isEnabled()) {
+      VkQueryPoolCreateInfo queryPoolInfo = {};
+      queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+      queryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+      queryPoolInfo.queryCount = 1;
+
+      VkQueryPool* queryPools = m_queryPools.getDataUnsafe();
+      for (int i=0; i<256; ++i) {
+        VkResult res = device->vkd()->vkCreateQueryPool(device->handle(), &queryPoolInfo, nullptr, &queryPools[i]);
+
+        if (res != VK_SUCCESS)
+          throw DxvkError("FramePacer: Failed to create submit query pool");
+      }
+    }
   }
 
 
   FramePacer::~FramePacer() {
     delete m_presentationStats.load();
     delete m_gpuBufferStats.load();
+
+    if (m_calibratedDeviceTimestamps.isEnabled()) {
+      for (int i=0; i<256; ++i) {
+        // calling queryPool.alloc() ensures it's not in use
+        m_device->vkd()->vkDestroyQueryPool(m_device->handle(), *m_queryPools.alloc(), nullptr);
+      }
+    }
+  }
+
+
+  VkResult FramePacer::getSubmitQueryPoolResult( VkQueryPool* queryPool, uint64_t* timestamp ) {
+    VkQueryResultFlags flags = VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT;
+    VkResult res = m_device->vkd()->vkGetQueryPoolResults(
+      m_device->handle(), *queryPool, 0, 1, sizeof(uint64_t),
+      timestamp, sizeof(uint64_t), flags
+    );
+
+    if (unlikely(res != VK_SUCCESS))
+      Logger::err( str::format( "FramePacer: vkGetQueryPoolResults returned ", res) );
+
+    return res;
   }
 
 }

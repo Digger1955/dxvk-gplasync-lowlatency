@@ -17,6 +17,7 @@ namespace dxvk {
 
   #define EXTENSIONS_WITH_FEATURES                 \
     HANDLE_EXT(extAttachmentFeedbackLoopLayout);   \
+    HANDLE_EXT(extCalibratedTimestamps);           \
     HANDLE_EXT(extConservativeRasterization);      \
     HANDLE_EXT(extCustomBorderColor);              \
     HANDLE_EXT(extDepthClipEnable);                \
@@ -40,6 +41,7 @@ namespace dxvk {
     HANDLE_EXT(extSwapchainMaintenance1);          \
     HANDLE_EXT(extTransformFeedback);              \
     HANDLE_EXT(extVertexAttributeDivisor);         \
+    HANDLE_EXT(khrCalibratedTimestamps);           \
     HANDLE_EXT(khrExternalMemoryWin32);            \
     HANDLE_EXT(khrExternalSemaphoreWin32);         \
     HANDLE_EXT(extLoadStoreOpNone);                \
@@ -176,6 +178,11 @@ namespace dxvk {
       std::strncpy(error, message->c_str(), errorSize - 1u);
 
     return !message;
+  }
+
+
+  uint32_t DxvkDeviceCapabilities::getTimestampValidBits() const {
+    return m_queuesAvailable[m_queueMapping.graphics.family].queueFamilyProperties.timestampValidBits;
   }
 
 
@@ -780,6 +787,9 @@ namespace dxvk {
       /* Allows sampling currently bound render targets for client APIs */
       ENABLE_EXT_FEATURE(extAttachmentFeedbackLoopLayout, attachmentFeedbackLoopLayout, false),
 
+      /* Calibrated timestamps for frame pacing */
+      ENABLE_EXT(extCalibratedTimestamps, false),
+
       /* Enables client API features */
       ENABLE_EXT(extConservativeRasterization, false),
 
@@ -861,6 +871,9 @@ namespace dxvk {
       /* Vertex attribute divisor, used by client APIs */
       ENABLE_EXT_FEATURE(extVertexAttributeDivisor, vertexAttributeInstanceRateDivisor, false),
       ENABLE_EXT_FEATURE(extVertexAttributeDivisor, vertexAttributeInstanceRateZeroDivisor, false),
+
+      /* Calibrated timestamps for frame pacing and present_timing */
+      ENABLE_EXT(khrCalibratedTimestamps, false),
 
       /* External memory features for wine */
       ENABLE_EXT(khrExternalMemoryWin32, false),
