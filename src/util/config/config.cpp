@@ -134,7 +134,7 @@ namespace dxvk {
     }} },
     /* Fifa '19+: Binds typed buffer SRV to shader *
      * that expects raw/structured buffer SRV      */
-    { R"(\\FIFA(19|[2-9][0-9])(_demo)?\.exe$)", {{
+    { R"(\\FIFA(19|20|21|22)(_demo)?\.exe$)", {{
       { "dxvk.useRawSsbo",                  "True" },
     }} },
     /* Resident Evil 2/3: Ignore WaW hazards      */
@@ -1163,6 +1163,12 @@ namespace dxvk {
      * Fixes a crash on resolution change         */
     { R"(\\Pirates!\.exe$)", {{
       { "d3d9.countLosableResources",      "False" },
+    }} },
+    /* Total War Pharaoh Dynasties: Broken menu
+     * because the game doesn't manage to respect
+     * pitch for an A8_UNORM image                */
+    { R"(\\Pharaoh\.exe$)", {{
+      { "d3d11.disableDirectImageMapping",  "True" },
     }} },
 
     /**********************************************/
