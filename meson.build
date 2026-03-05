@@ -21,6 +21,7 @@ compiler_args = [
   '-flto=auto',
   '-fuse-linker-plugin',
   '-Wimplicit-fallthrough',
+  '-Wno-deprecated', # Silences warnings about use of -mtune=x86-64
   # gcc
   '-Wno-missing-field-initializers',
   '-Wno-unused-parameter',
