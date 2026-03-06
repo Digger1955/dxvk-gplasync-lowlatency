@@ -8,6 +8,20 @@ A Vulkan 1.3-based translation layer for Direct3D 8/9/10/11 which allows running
 
 For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). It supports Windows 7/8/10/11, Linux/Mac, requires SSE2 CPU, GPU with Vulkan driver that is Vulkan 1.1 compliant. It has implemented Direct3D 8/9/10/11 and a build with Asynchronous pipeline compilation (Async).
 
+### Additional Info
+
+ - [DXVK-GPLALL Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki)
+
+ - [Detailed Changelog](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog)
+
+ - [Builds Reference Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Builds-Reference-Guide) - recommended to read to achieve the best results on the end-user system.
+
+ - [Frequently Asked Questions (FAQ)](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Frequently-Asked-Questions-(FAQ))
+
+ - [`dxvk.conf` Options Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide) - recommended to read to achieve the best results on the end-user system.
+
+ - [Contributing Guidelines](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Contributing-Guidelines)
+
 ## Major changes compared to [upstream DXVK](https://github.com/doitsujin/dxvk)
 
 1. Implemented Low Latency frame pacing mode that aims to greatly reduce latency with minimal impact in fps. Author - [netborg-afps](https://github.com/netborg-afps/dxvk/releases)
@@ -36,12 +50,6 @@ Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/rel
 Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
 8. Maintaining DXVK 2.6.x branch for GPUs/drivers that do not meet [DXVK 2.7 requirements](https://github.com/doitsujin/dxvk/releases/tag/v2.7). Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
-
-Detailed Changelog provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog).
-
-Builds Reference Guide provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Builds-Reference-Guide).
-
-Contributing Guidelines provided in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Contributing-Guidelines).
 
 ## How to use (Windows 10/11)
 
@@ -176,7 +184,7 @@ In games that load their shaders during loading screens or in the menu, this can
 
 **Note:** Games which only load their D3D shaders at draw time (e.g. most Unreal Engine games) will still exhibit some stutter, although it should still be less severe than without this feature.
 
-**IMPORTANT**: Disabled by default since DXVK-GPLALL 2.6.1-4. Reasons have been specified in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#dxvkenablegraphicspipelinelibrary)
+**IMPORTANT**: Disabled by default since DXVK-GPLALL 2.6.1-4. Reasons have been specified in [Wiki](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#dxvkenablegraphicspipelinelibrary).
 
 ## State cache
 DXVK-GPLALL caches pipeline state by default, so that shaders can be recompiled ahead of time on subsequent runs of an application, even if the driver's own shader cache got invalidated in the meantime. This cache is enabled by default, and generally reduces stuttering.
@@ -226,11 +234,14 @@ Optimized for Variable Refresh Rate (VRR) displays, `VK_PRESENT_MODE_IMMEDIATE_K
 ### Usage
 
 `DXVK_FRAME_PACE` environment variable has the next options: `max-frame-latency`, `min-latency`, `low-latency` and `low-latency-vrr-x`. Default is `DXVK_FRAME_PACE=low-latency`.
-`low-latency-vrr-x` is a special option, which requires to specify display refresh rate, instead of `x`. For example, if user has 360 Hz VRR display, then option must be `low-latency-vrr-360`. **Important:** Care has to be taken that the system is configured such that the display is indeed using a variable refresh rate, otherwise this mode won't work properly.
+
+`low-latency-vrr-x` is a special option, which requires to specify display refresh rate, instead of `x`. For example, if user has 360 Hz display, then option must be `"low-latency-vrr-360"`. This mode does not strictly require VRR display, but it is designed for VRR displays and works better than `"low-latency"` on such displays.
 
 `DXVK_FRAME_PACE` environment variable represented in the `dxvk.conf` as `dxvk.framePace`. Default is `dxvk.framePace = "low-latency"`
 
-`dxvk.lowLatencyOffset` option in `dxvk.conf` allows for fine-tuning the `low-latency mode`. Values are in microseconds. Positive values might improve responsiveness even further, although only very slightly, this may be relevant for edge cases. Negative values might improve fps. Default is `dxvk.lowLatencyOffset = 0`
+**Note**: `low-latency-vrr-x` mode is not default, only because there is no way (for now) to automatically determine user's display refresh rate.
+
+`dxvk.lowLatencyOffset` option in `dxvk.conf` allows for fine-tuning `"low-latency"` and `"low-latency-vrr-x"` frame pacing modes. Values are in microseconds. Positive values might improve responsiveness even further, although only very slightly, this may be relevant for edge cases. Negative values might improve fps. Default is `dxvk.lowLatencyOffset = 0`
 
 `dxvk.lowLatencyAllowCpuFramesOverlap` option in `dxvk.conf` controls whether a frame is allowed to begin before finishing processing the cpu-part of the previous one, when low-latency frame pacing is used. Snappiness may be improved when disallowing overlap. On the other hand, this might also decrease fps in certain cases. Default is `dxvk.lowLatencyAllowCpuFramesOverlap = True`
 
