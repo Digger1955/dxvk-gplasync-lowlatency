@@ -14,11 +14,11 @@ For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use 
 
  - [Detailed Changelog](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Detailed-Changelog)
 
- - [Builds Reference Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Builds-Reference-Guide) - recommended to read to achieve the best results on the end-user system.
+ - [Builds Reference Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Builds-Reference-Guide) - recommended to read to achieve the best results on the end-user system and **REQUIRED TO READ BEFORE PROVIDING DXVK-GPLALL AS A PART OF WINE/PROTON.**
 
- - [Frequently Asked Questions (FAQ)](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Frequently-Asked-Questions-(FAQ))
+ - [Frequently Asked Questions (FAQ)](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Frequently-Asked-Questions-(FAQ)) - **REQUIRED TO READ BEFORE PROVIDING DXVK-GPLALL AS A PART OF WINE/PROTON.**
 
- - [`dxvk.conf` Options Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide) - recommended to read to achieve the best results on the end-user system.
+ - [`dxvk.conf` Options Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide) - recommended to read to achieve the best results on the end-user system and **REQUIRED TO READ BEFORE PROVIDING DXVK-GPLALL AS A PART OF WINE/PROTON.**
 
  - [Contributing Guidelines](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/Contributing-Guidelines)
 
