@@ -12,22 +12,23 @@ dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 compiler_args = [
   '-O3',
   '-pipe',
-  '-march=x86-64',
-  '-mtune=x86-64',
+  '-march=x86-64', # SSE2 required
+  '-mtune=x86-64', # Tuning for SSE2 CPUs 
   '-msse',
   '-msse2',
   '-mfpmath=sse',
-  '-fno-semantic-interposition',
-  '-flto=auto',
-  '-fuse-linker-plugin',
+  '-fno-semantic-interposition', # Semantic interposition prevents a range of inter-procedural optimizations
+  '-flto=auto', # Enables FullLTO for Clang and GCC
   '-Wimplicit-fallthrough',
   '-Wno-deprecated', # Silences warnings about use of -mtune=x86-64
   # gcc
+  '-fuse-linker-plugin', # Enabled by default in newer GCC toolchains
   '-Wno-missing-field-initializers',
   '-Wno-unused-parameter',
   '-Wno-misleading-indentation',
   '-Wno-cast-function-type', # Needed for GetProcAddress.
   # clang
+  '-fwhole-program-vtables', # Requires FullLTO, enables single-implementation devirtualization and virtual constant propagation
   '-Wno-unused-private-field',
   '-Wno-microsoft-exception-spec',
   '-Wno-extern-c-compat',
