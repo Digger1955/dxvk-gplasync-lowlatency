@@ -25,6 +25,7 @@ namespace dxvk {
     CalibratedDeviceTimestamps( DxvkDevice* device );
     ~CalibratedDeviceTimestamps() { }
 
+    void enable() { m_enabled = m_canEnable; }
     bool isEnabled() const { return m_enabled; }
 
     void calibrate();
@@ -41,9 +42,10 @@ namespace dxvk {
 
     DxvkDevice* m_device;
     Calibration m_calibration;
+    bool        m_enabled = false;
 
     const float    m_timestampPeriod;
-    const bool     m_enabled;
+    const bool     m_canEnable;
 
   };
 
