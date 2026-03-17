@@ -78,7 +78,6 @@ if platform == 'windows'
       '-static',
       '-static-libgcc',
       '-static-libstdc++',
-      '-lsynchronization',
       # We need to set the section alignment for debug symbols to
       # work properly as well as avoiding a memcpy from the Wine loader.
       '-Wl,--file-alignment=4096',
