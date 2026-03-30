@@ -84,7 +84,7 @@ namespace dxvk::hud {
 
 
   HudPos HudJitterItem::render(
-    const Rc<DxvkCommandList>&ctx,
+    const DxvkContextObjects& ctx,
     const HudPipelineKey&     key,
     const HudOptions&         options,
           HudRenderer&        renderer,

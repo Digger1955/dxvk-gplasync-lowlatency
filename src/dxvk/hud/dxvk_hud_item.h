@@ -308,7 +308,7 @@ namespace dxvk::hud {
     void update(dxvk::high_resolution_clock::time_point time);
 
     HudPos render(
-      const Rc<DxvkCommandList>&ctx,
+      const DxvkContextObjects& ctx,
       const HudPipelineKey&     key,
       const HudOptions&         options,
             HudRenderer&        renderer,
