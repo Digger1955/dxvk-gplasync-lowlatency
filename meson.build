@@ -10,7 +10,7 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
-  '-Os', # Optimizes for size. Enables all -O2 optimizations except those that increase code size, performs further optimizations designed to reduce code size
+  '-O3', # Optimizes for speed. -Os fails to compile due to compiler bug
   '-pipe', # Enables use of pipes instead of temporary files for communication between the various stages of compilation; faster compilation, uses more memory, no impact on code
   '-march=x86-64', # SSE2 required
   '-mtune=x86-64', # Tuning for SSE2 CPUs 
@@ -27,7 +27,7 @@ compiler_args = [
   '-Wno-unused-parameter',
   '-Wno-misleading-indentation',
   '-Wno-cast-function-type', # Needed for GetProcAddress.
-  # clang
+  # clang; fails to compile due to non-compliance with Clang requirements.
   '-fwhole-program-vtables', # Requires FullLTO, enables single-implementation devirtualization and virtual constant propagation
   '-Wno-unused-private-field',
   '-Wno-microsoft-exception-spec',
