@@ -18,6 +18,8 @@ compiler_args = [
   '-msse2',
   '-mfpmath=sse',
   '-fno-semantic-interposition', # Semantic interposition prevents a range of inter-procedural optimizations
+  '-ffunction-sections', # Place each function into its own section, improves locality of reference in the instruction space
+  '-fdata-sections', # Place each data item into its own section, improves locality of reference in the instruction space
   '-flto=auto', # Enables FullLTO for Clang and GCC
   '-Wimplicit-fallthrough',
   '-Wno-deprecated', # Silences warnings about use of -mtune=x86-64
@@ -38,6 +40,7 @@ compiler_args = [
 
 link_args = [
   '-s', # Removes all symbol table and relocation information from the executable
+  '-Wl,--gc-sections', # Removes function and data duplicates from sections
 ]
 
 if get_option('build_id')
