@@ -138,8 +138,9 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 - `swvp`: Shows whether or not the device is running in software vertex processing mode *[D3D9 Only]*
 - `scale=x`: Scales the HUD by a factor of `x` (e.g. `1.5`)
 - `opacity=y`: Adjusts the HUD opacity by a factor of `y` (e.g. `0.5`, `1.0` being fully opaque).
-- `renderlatency`: Start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. Note that this will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. Average over 100 frames.
-- `latencydetails`: provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to reduce GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
+- `renderlatency`: Shows average render latency over 100 frames. Measurements are taken from the start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. This will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. 
+- `jitter`: Shows average stable jitter values over 30 seconds. Jitter values are measured for frametime, latency and app-thread latency. Lower jitter values suggest better smoothness. App-thread (render-thread) latency may be important for smoothness when the game, for example, is taking timestamps to optimize synchronization of input/simulation to its render thread.
+- `latencydetails`: Provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to reduce GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
 
 Additionally, `DXVK_HUD=1` has the same effect as `DXVK_HUD=devinfo,fps`, and `DXVK_HUD=full` enables all available HUD elements.
 
