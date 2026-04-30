@@ -10,23 +10,27 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
-  '-O3',
-  '-pipe',
-  '-march=x86-64',
-  '-mtune=x86-64',
+  '-O3', # Optimizes for speed. -Os fails to compile due to compiler bug
+  '-pipe', # Enables use of pipes instead of temporary files for communication between the various stages of compilation; faster compilation, uses more memory, no impact on code
+  '-march=x86-64', # SSE2 required
+  '-mtune=x86-64', # Tuning for SSE2 CPUs 
   '-msse',
   '-msse2',
   '-mfpmath=sse',
-  '-fno-semantic-interposition',
-  '-flto=auto',
-  '-fuse-linker-plugin',
+  '-fno-semantic-interposition', # Semantic interposition prevents a range of inter-procedural optimizations
+  '-ffunction-sections', # Place each function into its own section, improves locality of reference in the instruction space
+  '-fdata-sections', # Place each data item into its own section, improves locality of reference in the instruction space
+  '-flto=auto', # Enables FullLTO for Clang and GCC
   '-Wimplicit-fallthrough',
+  '-Wno-deprecated', # Silences warnings about use of -mtune=x86-64
   # gcc
+  '-fuse-linker-plugin', # Enabled by default in newer GCC toolchains
   '-Wno-missing-field-initializers',
   '-Wno-unused-parameter',
   '-Wno-misleading-indentation',
   '-Wno-cast-function-type', # Needed for GetProcAddress.
-  # clang
+  # clang; fails to compile due to non-compliance with Clang requirements.
+  '-fwhole-program-vtables', # Requires FullLTO, enables single-implementation devirtualization and virtual constant propagation
   '-Wno-unused-private-field',
   '-Wno-microsoft-exception-spec',
   '-Wno-extern-c-compat',
@@ -35,7 +39,8 @@ compiler_args = [
 ]
 
 link_args = [
-  '-s',
+  '-s', # Removes all symbol table and relocation information from the executable
+  '-Wl,--gc-sections', # Removes function and data duplicates from sections
 ]
 
 if get_option('build_id')
@@ -76,6 +81,7 @@ if platform == 'windows'
       '-static',
       '-static-libgcc',
       '-static-libstdc++',
+      '-lsynchronization',
       # We need to set the section alignment for debug symbols to
       # work properly as well as avoiding a memcpy from the Wine loader.
       '-Wl,--file-alignment=4096',
@@ -102,22 +108,25 @@ if platform == 'windows'
   else
     # Windows (MSVC) Compiler Options
     compiler_args += [
-      '/arch:SSE2',
-      '/O2',
-      '/Ob3',
-      '/GL',
-      '/Gw',
-      '/Qpar',
-      '/Qpar-report:2',
-      '/Qvec-report:2'
+      '/arch:SSE2', # MSVC default, SSE2 required
+      '/favor:blend', # MSVC default, designed to give the best performance across a broad range of x86 and x64 processors
+      '/O1', # Minimizes Size, eqvivalent to - /Og /Os /Oy /Ob2 /GF /Gy. For out-of-order CPUs fitting a code segment into the instruction cache is preffered to fastest code
+      '/Oi', # Replaces function calls with intrinsic or otherwise special forms of the function
+      '/Ob3', # More aggressive inlining than /Ob2, but has the same restrictions
+      '/GL', # Enables whole program optimization, required for LTCG
+      '/Gw', # Package global data in COMDAT sections for optimization, required for LTCG
+      '/Qpar',# Enables automatic parallelization of loops
+      '/Qpar-report:1', # Outputs an informational message for loops that are parallelized
+      '/Qvec-report:1' # Outputs an informational message for loops that are vectorized
     ]
     # MSVC Linker Options
     link_args += [
       '/FILEALIGN:4096',
-      '/INCREMENTAL:NO',
-      '/OPT:REF,ICF',
-      '/LTCG',
-      '/DEBUG:NONE'
+      '/LTCG', # Performs a Link-Time Code Generation
+      '/INCREMENTAL:NO', # Performs a full link LTCG
+      '/OPT:REF,ICF', # REF - eliminates functions and data that are never referenced; ICF - performs identical COMDAT folding
+      '/DEBUG:NONE', # Doesn't generate a PDB
+      '-lsynchronization'
     ]
   endif
 
