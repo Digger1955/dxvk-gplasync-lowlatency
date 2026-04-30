@@ -10,23 +10,29 @@ cc = meson.get_compiler('c')
 dxvk_is_msvc = cpp.get_argument_syntax() == 'msvc'
 
 compiler_args = [
-  '-O3',
-  '-pipe',
-  '-march=x86-64-v2',
-  '-mtune=generic',
+  '-O3', # Optimizes for speed. -Os fails to compile due to compiler bug
+  '-pipe', # Enables use of pipes instead of temporary files for communication between the various stages of compilation; faster compilation, uses more memory, no impact on code
+  '-march=x86-64-v2', # SSE4.2 required
+  '-mtune=generic', # Tuning for newest CPUs
   '-msse',
   '-msse2',
   '-mfpmath=sse',
-  '-fno-semantic-interposition',
-  '-flto=auto',
-  '-fuse-linker-plugin',
+  '-mbmi', # LZCNT/TZCNT etc. Improves the speed of bit manipulation. -mbmi2 is not used, because it enables PDEP/PEXT, which are slow on AMD CPUs up to and including Zen2.
+  '-mmovbe', # Optimizes byte swapping of four and eight byte entities.
+  '-fno-semantic-interposition', # Semantic interposition prevents a range of inter-procedural optimizations.
+  '-ffunction-sections', # Place each function into its own section, improves locality of reference in the instruction space
+  '-fdata-sections', # Place each data item into its own section, improves locality of reference in the instruction space
+  '-flto=auto', # Enables FullLTO for Clang and GCC
   '-Wimplicit-fallthrough',
+  '-Wno-deprecated', # Silences warnings about use of -mtune=x86-64
   # gcc
+  '-fuse-linker-plugin', # Enabled by default in newer GCC toolchains
   '-Wno-missing-field-initializers',
   '-Wno-unused-parameter',
   '-Wno-misleading-indentation',
   '-Wno-cast-function-type', # Needed for GetProcAddress.
-  # clang
+  # clang; fails to compile due to non-compliance with Clang requirements.
+  '-fwhole-program-vtables', # Requires FullLTO, enables single-implementation devirtualization and virtual constant propagation
   '-Wno-unused-private-field',
   '-Wno-microsoft-exception-spec',
   '-Wno-extern-c-compat',
@@ -35,7 +41,8 @@ compiler_args = [
 ]
 
 link_args = [
-  '-s',
+  '-s', # Removes all symbol table and relocation information from the executable
+  '-Wl,--gc-sections', # Removes function and data duplicates from sections
 ]
 
 if get_option('build_id')
@@ -76,6 +83,7 @@ if platform == 'windows'
       '-static',
       '-static-libgcc',
       '-static-libstdc++',
+      '-lsynchronization',
       # We need to set the section alignment for debug symbols to
       # work properly as well as avoiding a memcpy from the Wine loader.
       '-Wl,--file-alignment=4096',
@@ -102,24 +110,27 @@ if platform == 'windows'
   else
     # Windows (MSVC) Compiler Options
     compiler_args += [
-      '/arch:AVX2',
-      '/favor:AMD64',
-      '/d2vzeroupper',
-      '/O2',
-      '/Ob3',
-      '/GL',
-      '/Gw',
-      '/Qpar',
-      '/Qpar-report:2',
-      '/Qvec-report:2'
+      '/arch:AVX2', # Primary benefit - generate VEX prefix versions of SSE instructions - helps reduce register scheduling pressure. Enables usage of BMI and BMI2
+      '/favor:AMD64', # Tuning for AMD64 CPUs
+      '/d2vzeroupper', # Optimizes behavior of vzeroupper instruction usage on AMD Zen2 and later AMD CPUs
+      '/O1', # Minimizes Size, eqvivalent to - /Og /Os /Oy /Ob2 /GF /Gy. For out-of-order CPUs fitting a code segment into the instruction cache is preffered to fastest code
+      '/Oi', # Replaces function calls with intrinsic or otherwise special forms of the function
+      '/Ob3', # More aggressive inlining than /Ob2, but has the same restrictions
+      '/GL', # Enables whole program optimization, required for LTCG
+      '/Gw', # Package global data in COMDAT sections for optimization, required for LTCG
+      '/Qpar',# Enables automatic parallelization of loops
+      '/Qpar-report:1', # Outputs an informational message for loops that are parallelized
+      '/Qvec-report:1' # Outputs an informational message for loops that are vectorized
     ]
     # MSVC Linker Options
     link_args += [
       '/FILEALIGN:4096',
-      '/INCREMENTAL:NO',
-      '/OPT:REF,ICF',
-      '/LTCG',
-      '/DEBUG:NONE'
+      '/LTCG', # Performs a Link-Time Code Generation
+      '/INCREMENTAL:NO', # Performs a full link LTCG
+      '/OPT:REF,ICF', # REF - eliminates functions and data that are never referenced; ICF - performs identical COMDAT folding
+      '/d2:-vzeroupper', # Required by LTCG for AMD Zen2 and later AMD CPUs, MSVC 2022 default, optimizes behavior of vzeroupper instruction usage on AMD Zen2 and later AMD CPUs
+      '/DEBUG:NONE', # Doesn't generate a PDB
+      '-lsynchronization'
     ]
   endif
 
