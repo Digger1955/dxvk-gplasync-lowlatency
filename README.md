@@ -6,7 +6,7 @@ A Vulkan 1.3-based translation layer for Direct3D 8/9/10/11 which allows running
 2. Linux using Wine, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
 3. MacOS using Wine/CrossOver, if GPU has Vulkan driver that is Vulkan 1.3 compliant. Requires SSE2 CPU.
 
-For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). It supports Windows 7/8/10/11, Linux/Mac, requires SSE2 CPU, GPU with Vulkan driver that is Vulkan 1.1 compliant. It has implemented Direct3D 8/9/10/11 and a build with Asynchronous pipeline compilation (Async).
+For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use [DXVK-SAO](https://github.com/Digger1955/dxvk-sao). It supports Windows 7/8/10/11, Linux/Mac/Android-over-[Winlator](https://github.com/brunodev85/winlator), requires SSE2 CPU, GPU with Vulkan driver that is Vulkan 1.1 compliant. It has implemented Direct3D 8/9/10/11 and a build with Asynchronous pipeline compilation (Async).
 
 ### Additional Info
 
@@ -31,21 +31,21 @@ For GPUs that do not have Vulkan 1.3 compliant driver, it is recommended to use 
 5. Implemented all of aforementioned in one DXVK package. Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 6. Provided various GCC (for any OS) builds of DXVK-GPLALL:
 
-   a) optimized for `SSE2` (`-march=x86-64, -mtune=x86-64`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level;
+   a) optimized for `SSE2` (`-march=x86-64`) and tuned for older CPUs (`-mtune=x86-64`) with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level;
 
-   b) optimized for `SSE4.2` (`-march=x86-64-v2, -mtune=intel`) and newer Intel CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level.
+   b) optimized for `SSE4.2` (`-march=x86-64-v2`) and tuned for newer CPUs (`-mtune=generic`) with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level;
 
-   c) optimized for `SSE4.2` (`-march=x86-64-v2, -mtune=generic`) and newer CPUs with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level.
+   c) optimized for `SSE4.2` (`-march=x86-64-v2`) and tuned for newer Intel CPUs (`-mtune=intel`) with Link-Time Optimization (`LTO`, a.k.a. `-flto=auto`) and `-O3` optimization level.
 
 Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
 7. Provided various MSVC (requires [MSVCRT](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)) builds of DXVK-GPLALL:
 
-   a) optimized for `SSE2` (`/arch:SSE2`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level;
+   a) optimized for `SSE2` (`/arch:SSE2`) and tuned for older CPUs (`/favor:blend`) with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O1, /Oi, /Ob3` optimization level;
 
-   b) optimized for `SSE4.2` (`/arch:SSE4.2`) and newer Intel (`/favor:INTEL64` a.k.a. `/favor:EM64T`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level;
+   b) optimized for `AVX2` (`/arch:AVX2`) and tuned for newer AMD CPUs (`/favor:AMD64`) with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O1, /Oi, /Ob3` optimization level;
 
-   c) optimized for `AVX2` (`/arch:AVX2`) and newer AMD (`/favor:AMD64`) CPUs with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O2` optimization level.
+   c) optimized for `SSE4.2` (`/arch:SSE4.2`) and tuned for newer Intel CPUs (`/favor:INTEL64` a.k.a. `/favor:EM64T`) with Link-Time Optimization (`LTO`, a.k.a. `/LTCG`) and `/O1, /Oi, /Ob3` optimization level.
 
 Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases)
 
@@ -53,14 +53,14 @@ Author - [Digger1955](https://github.com/Digger1955/dxvk-gplasync-lowlatency/rel
 
 ## How to use (Windows 10/11)
 
-1. Download DXVK package from [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page.
+1. Download DXVK-GPLALL package from [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page.
 2. Copy appropriate [DLL dependencies](https://github.com/Digger1955/dxvk-gplasync-lowlatency?tab=readme-ov-file#dll-dependencies) to the location of application's main executable folder.
 3. Run application.
 
-**Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
+**Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `%APPDATA%/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings. Please refer to [Quick Start Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#quick-start-guide) to achieve the best results on the end-user system.
 
 ## How to use (Linux/MacOS)
-In order to install a DXVK package obtained from the [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page into a given wine prefix, copy or symlink the DLLs into the following directories as follows, then open `winecfg` and manually add `native` DLL overrides for `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` under the Libraries tab.
+In order to install a DXVK-GPLALL package obtained from the [release](https://github.com/Digger1955/dxvk-gplasync-lowlatency/releases) page into a given wine prefix, copy or symlink the DLLs into the following directories as follows, then open `winecfg` and manually add `native` DLL overrides for `d3d8`, `d3d9`, `d3d10core`, `d3d11` and `dxgi` under the Libraries tab.
 
 In a default Wine prefix that would be as follows:
 ```
@@ -83,7 +83,7 @@ In order to remove DXVK from a prefix, remove the DLLs and DLL overrides, and ru
 
 Tools such as Steam Play, Lutris, Bottles, Heroic Launcher, etc will automatically handle setup of dxvk on their own when enabled.
 
-**Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `/home/$USER/.config/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings.
+**Important**: It is **STRONGLY RECOMMENDED** to create `dxvk.conf` at application's main executable folder (per-application configuration file - first priority) or at `/home/$USER/.config/dxvk.conf` (one global configuration file - second priority) with your desired DXVK settings. Please refer to [Quick Start Guide](https://github.com/Digger1955/dxvk-gplasync-lowlatency/wiki/dxvk.conf-Options-Guide#quick-start-guide) to achieve the best results on the end-user system.
 
 ## DLL dependencies 
 Listed below are the DLL requirements for using DXVK with any single API.
@@ -138,8 +138,9 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 - `swvp`: Shows whether or not the device is running in software vertex processing mode *[D3D9 Only]*
 - `scale=x`: Scales the HUD by a factor of `x` (e.g. `1.5`)
 - `opacity=y`: Adjusts the HUD opacity by a factor of `y` (e.g. `0.5`, `1.0` being fully opaque).
-- `renderlatency`: Start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. Note that this will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. Average over 100 frames.
-- `latencydetails`: provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to reduce GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
+- `renderlatency`: Shows average render latency over 100 frames. Measurements are taken from the start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. This will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. 
+- `jitter`: Shows average stable jitter values over 30 seconds. Jitter values are measured for frametime, latency and app-thread latency. Lower jitter values suggest better smoothness. App-thread (render-thread) latency may be important for smoothness when the game, for example, is taking timestamps to optimize synchronization of input/simulation to its render thread.
+- `latencydetails`: Provides insights about GPU buffer and v-sync buffer statistics. Helpful for fine-tuning the `dxvk.lowLatencyOffset` variable to reduce GPU buffering and for fine-tuning the VRR refresh rate to minimize v-sync buffering in the VRR mode.
 
 Additionally, `DXVK_HUD=1` has the same effect as `DXVK_HUD=devinfo,fps`, and `DXVK_HUD=full` enables all available HUD elements.
 
