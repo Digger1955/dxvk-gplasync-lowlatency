@@ -6111,7 +6111,8 @@ namespace dxvk {
 
     // Retrieve and bind actual Vulkan pipeline handle
     auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state,
-      this->checkAsyncCompilationCompat());
+      this->checkAsyncCompilationCompat(),
+      m_state.dyn.depthStencilState);
 
     if (unlikely(!pipelineInfo.handle))
       return false;
