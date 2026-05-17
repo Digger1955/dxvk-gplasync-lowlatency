@@ -556,8 +556,7 @@ namespace dxvk {
      */
     DxvkGraphicsPipelineHandle getPipelineHandle(
       const DxvkGraphicsPipelineStateInfo&    state,
-            bool                              async,
-      const DxvkDepthStencilState&            dynDs = { });
+            bool                              async);
 
     /**
      * \brief Compiles a pipeline
@@ -687,8 +686,7 @@ namespace dxvk {
     DxvkPipelineLayoutBuilder buildPipelineLayout() const;
 
     void writePipelineStateToCache(
-      const DxvkGraphicsPipelineStateInfo& state,
-      const DxvkDepthStencilState&         dynDs) const;
+      const DxvkGraphicsPipelineStateInfo& state) const;
 
     void logPipelineState(
             LogLevel                       level,
