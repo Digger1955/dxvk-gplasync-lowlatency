@@ -303,9 +303,11 @@ namespace dxvk {
     // Queue a job to write this pipeline to the cache
     std::unique_lock<dxvk::mutex> lock(m_writerLock);
 
-    m_writerQueue.push({
-      DxvkStateCacheEntryType::PipelineLibrary, shaders,
-      DxvkGraphicsPipelineStateInfo(), g_nullHash });
+    DxvkStateCacheEntry plEntry;
+    plEntry.type    = DxvkStateCacheEntryType::PipelineLibrary;
+    plEntry.shaders = shaders;
+    plEntry.hash    = g_nullHash;
+    m_writerQueue.push(plEntry);
     m_writerCond.notify_one();
 
     createWriter();
@@ -314,7 +316,10 @@ namespace dxvk {
 
   void DxvkStateCache::addGraphicsPipeline(
     const DxvkStateCacheKey&              shaders,
-    const DxvkGraphicsPipelineStateInfo&  state) {
+    const DxvkGraphicsPipelineStateInfo&  state,
+    const DxvkDsInfo&                     ds,
+    const DxvkDsStencilOp&                dsFront,
+    const DxvkDsStencilOp&                dsBack) {
     if (!m_enable || shaders.vs.eq(g_nullShaderKey))
       return;
 
@@ -322,17 +327,27 @@ namespace dxvk {
     auto entries = m_entryMap.equal_range(shaders);
 
     for (auto e = entries.first; e != entries.second; e++) {
-      if (m_entries[e->second].type == DxvkStateCacheEntryType::MonolithicPipeline
-       && m_entries[e->second].gpState == state)
+      const auto& entry = m_entries[e->second];
+      if (entry.type == DxvkStateCacheEntryType::MonolithicPipeline
+       && entry.gpState   == state
+       && !std::memcmp(&entry.gpDs,      &ds,      sizeof(ds))
+       && !std::memcmp(&entry.gpDsFront, &dsFront, sizeof(dsFront))
+       && !std::memcmp(&entry.gpDsBack,  &dsBack,  sizeof(dsBack)))
         return;
     }
 
     // Queue a job to write this pipeline to the cache
     std::unique_lock<dxvk::mutex> lock(m_writerLock);
 
-    m_writerQueue.push({
-      DxvkStateCacheEntryType::MonolithicPipeline,
-      shaders, state, g_nullHash });
+    DxvkStateCacheEntry newEntry;
+    newEntry.type     = DxvkStateCacheEntryType::MonolithicPipeline;
+    newEntry.shaders  = shaders;
+    newEntry.gpState  = state;
+    newEntry.gpDs     = ds;
+    newEntry.gpDsFront = dsFront;
+    newEntry.gpDsBack  = dsBack;
+    newEntry.hash     = g_nullHash;
+    m_writerQueue.push(newEntry);
     m_writerCond.notify_one();
 
     createWriter();
@@ -631,11 +646,11 @@ namespace dxvk {
        || !data.read(entry.gpState.il, version)
        || !data.read(entry.gpState.rs, version)
        || !data.read(entry.gpState.ms, version)
-       || !data.read(entry.gpState.ds, version)
+       || !data.read(entry.gpDs, version)
        || !data.read(entry.gpState.om, version)
        || !data.read(entry.gpState.rt, version)
-       || !data.read(entry.gpState.dsFront, version)
-       || !data.read(entry.gpState.dsBack, version))
+       || !data.read(entry.gpDsFront, version)
+       || !data.read(entry.gpDsBack, version))
         return false;
 
       if (entry.gpState.il.attributeCount() > MaxNumVertexAttributes
@@ -716,11 +731,11 @@ namespace dxvk {
       data.write(entry.gpState.il);
       data.write(entry.gpState.rs);
       data.write(entry.gpState.ms);
-      data.write(entry.gpState.ds);
+      data.write(entry.gpDs);
       data.write(entry.gpState.om);
       data.write(entry.gpState.rt);
-      data.write(entry.gpState.dsFront);
-      data.write(entry.gpState.dsBack);
+      data.write(entry.gpDsFront);
+      data.write(entry.gpDsBack);
 
       // Write out render target swizzles and blend info
       for (uint32_t i = 0; i < MaxNumRenderTargets; i++)
