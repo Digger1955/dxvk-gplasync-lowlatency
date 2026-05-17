@@ -314,7 +314,10 @@ namespace dxvk {
 
   void DxvkStateCache::addGraphicsPipeline(
     const DxvkStateCacheKey&              shaders,
-    const DxvkGraphicsPipelineStateInfo&  state) {
+    const DxvkGraphicsPipelineStateInfo&  state,
+    const DxvkDsInfo&                     ds,
+    const DxvkDsStencilOp&                dsFront,
+    const DxvkDsStencilOp&                dsBack) {
     if (!m_enable || shaders.vs.eq(g_nullShaderKey))
       return;
 
@@ -323,7 +326,10 @@ namespace dxvk {
 
     for (auto e = entries.first; e != entries.second; e++) {
       if (m_entries[e->second].type == DxvkStateCacheEntryType::MonolithicPipeline
-       && m_entries[e->second].gpState == state)
+       && m_entries[e->second].gpState   == state
+       && m_entries[e->second].gpDs      == ds
+       && m_entries[e->second].gpDsFront == dsFront
+       && m_entries[e->second].gpDsBack  == dsBack)
         return;
     }
 
@@ -332,7 +338,7 @@ namespace dxvk {
 
     m_writerQueue.push({
       DxvkStateCacheEntryType::MonolithicPipeline,
-      shaders, state, g_nullHash });
+      shaders, state, ds, dsFront, dsBack, g_nullHash });
     m_writerCond.notify_one();
 
     createWriter();
@@ -453,7 +459,13 @@ namespace dxvk {
           if (!pipeline)
             pipeline = m_pipeManager->createGraphicsPipeline(item.gp);
 
-          m_pipeWorkers->compileGraphicsPipeline(pipeline, entry.gpState, DxvkPipelinePriority::Normal);
+          // Merge DS fields back into a temporary state for compilation only.
+          // They live in the entry to avoid a runtime duplicate of dynamic state.
+          DxvkGraphicsPipelineStateInfo compileState = entry.gpState;
+          compileState.ds      = entry.gpDs;
+          compileState.dsFront = entry.gpDsFront;
+          compileState.dsBack  = entry.gpDsBack;
+          m_pipeWorkers->compileGraphicsPipeline(pipeline, compileState, DxvkPipelinePriority::Normal);
         } break;
 
         case DxvkStateCacheEntryType::PipelineLibrary: {
@@ -631,11 +643,11 @@ namespace dxvk {
        || !data.read(entry.gpState.il, version)
        || !data.read(entry.gpState.rs, version)
        || !data.read(entry.gpState.ms, version)
-       || !data.read(entry.gpState.ds, version)
+       || !data.read(entry.gpDs, version)
        || !data.read(entry.gpState.om, version)
        || !data.read(entry.gpState.rt, version)
-       || !data.read(entry.gpState.dsFront, version)
-       || !data.read(entry.gpState.dsBack, version))
+       || !data.read(entry.gpDsFront, version)
+       || !data.read(entry.gpDsBack, version))
         return false;
 
       if (entry.gpState.il.attributeCount() > MaxNumVertexAttributes
@@ -716,11 +728,11 @@ namespace dxvk {
       data.write(entry.gpState.il);
       data.write(entry.gpState.rs);
       data.write(entry.gpState.ms);
-      data.write(entry.gpState.ds);
+      data.write(entry.gpDs);
       data.write(entry.gpState.om);
       data.write(entry.gpState.rt);
-      data.write(entry.gpState.dsFront);
-      data.write(entry.gpState.dsBack);
+      data.write(entry.gpDsFront);
+      data.write(entry.gpDsBack);
 
       // Write out render target swizzles and blend info
       for (uint32_t i = 0; i < MaxNumRenderTargets; i++)

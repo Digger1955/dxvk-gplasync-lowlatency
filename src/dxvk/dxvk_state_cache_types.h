@@ -47,6 +47,13 @@ namespace dxvk {
     DxvkStateCacheEntryType       type;
     DxvkStateCacheKey             shaders;
     DxvkGraphicsPipelineStateInfo gpState;
+    // DS fields are separated from gpState because they are fully dynamic
+    // at runtime (m_state.dyn.depthStencilState) and must not exist as a
+    // second copy in the live DxvkGraphicsPipelineStateInfo.
+    // Synthesised at write time; restored at compile time.
+    DxvkDsInfo                    gpDs;
+    DxvkDsStencilOp               gpDsFront;
+    DxvkDsStencilOp               gpDsBack;
     Sha1Hash                      hash;
   };
 
