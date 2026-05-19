@@ -40,6 +40,7 @@ namespace dxvk {
     VkBool32 renderPassResolveFormatBug : 1;
     VkBool32 preferRenderPassOps        : 1;
     VkBool32 preferPrimaryCmdBufs       : 1;
+    VkBool32 preferCachedMemory         : 1;
   };
   
   /**
