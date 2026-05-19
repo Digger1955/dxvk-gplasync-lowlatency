@@ -615,9 +615,11 @@ namespace dxvk {
     }} },
     /* Counter Strike: Global Offensive
        Needs NVAPI to avoid a forced AO + Smoke
-       exploit so we must force AMD vendor ID.    */
+       exploit so we must force AMD vendor ID.
+       Also writes to buffer after unlocking it. */
     { R"(\\csgo\.exe$)", {{
       { "d3d9.hideNvidiaGpu",               "True" },
+      { "d3d9.forceDrawTimeBufferUpload",   "True" },
     }} },
     /* Vampire - The Masquerade Bloodlines        */
     { R"(\\vampire\.exe$)", {{
@@ -1175,6 +1177,11 @@ namespace dxvk {
      * Fixes occasional vertex explosions         */
     { R"(\\W40k(_gog)?\.exe$)", {{
       { "dxvk.zeroMappedMemory",            "True" },
+    }} },
+    /* Insurgency
+       Writes to buffer after unlocking it. */
+    { R"(\\insurgency\.exe$)", {{
+      { "d3d9.forceDrawTimeBufferUpload",   "True" },
     }} },
 
     /**********************************************/
