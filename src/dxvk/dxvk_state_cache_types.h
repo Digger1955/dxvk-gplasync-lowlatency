@@ -47,6 +47,12 @@ namespace dxvk {
     DxvkStateCacheEntryType       type;
     DxvkStateCacheKey             shaders;
     DxvkGraphicsPipelineStateInfo gpState;
+    // DS state separated from gpState: setDepthStencilState() only writes
+    // m_state.dyn.depthStencilState, never gpState.ds/dsFront/dsBack.
+    // Synthesised at write time from dyn state; no runtime duplicate.
+    DxvkDsInfo                    gpDs;
+    DxvkDsStencilOp               gpDsFront;
+    DxvkDsStencilOp               gpDsBack;
     Sha1Hash                      hash;
   };
 

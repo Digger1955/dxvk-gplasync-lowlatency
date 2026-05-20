@@ -821,12 +821,9 @@ namespace dxvk {
     DxvkIlInfo              il;
     DxvkRsInfo              rs;
     DxvkMsInfo              ms;
-    DxvkDsInfo              ds;
     DxvkOmInfo              om;
     DxvkRtInfo              rt;
     DxvkScInfo              sc;
-    DxvkDsStencilOp         dsFront;
-    DxvkDsStencilOp         dsBack;
     DxvkOmAttachmentSwizzle omSwizzle         [DxvkLimits::MaxNumRenderTargets];
     DxvkOmAttachmentBlend   omBlend           [DxvkLimits::MaxNumRenderTargets];
     DxvkIlAttribute         ilAttributes      [DxvkLimits::MaxNumVertexAttributes];
