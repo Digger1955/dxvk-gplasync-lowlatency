@@ -225,7 +225,7 @@ namespace dxvk {
             DxvkGraphicsPipelineFlags       flags);
 
     VkPipelineDynamicStateCreateInfo  dyInfo    = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-    std::array<VkDynamicState, 12>    dyStates  = { };
+    std::array<VkDynamicState, 20>    dyStates  = { };
 
     bool eq(const DxvkGraphicsPipelineDynamicState& other) const;
 
@@ -561,7 +561,8 @@ namespace dxvk {
      */
     DxvkGraphicsPipelineHandle getPipelineHandle(
       const DxvkGraphicsPipelineStateInfo&    state,
-            bool                              async);
+            bool                              async,
+      const DxvkDepthStencilState&            dynDs = { });
 
     
     /**
@@ -690,7 +691,8 @@ namespace dxvk {
             bool                           trusted) const;
     
     void writePipelineStateToCache(
-      const DxvkGraphicsPipelineStateInfo& state) const;
+      const DxvkGraphicsPipelineStateInfo& state,
+      const DxvkDepthStencilState&         dynDs) const;
     
     void logPipelineState(
             LogLevel                       level,

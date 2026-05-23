@@ -56,7 +56,10 @@ namespace dxvk {
      */
     void addGraphicsPipeline(
       const DxvkStateCacheKey&              shaders,
-      const DxvkGraphicsPipelineStateInfo&  state);
+      const DxvkGraphicsPipelineStateInfo&  state,
+      const DxvkDsInfo&                     ds,
+      const DxvkDsStencilOp&                dsFront,
+      const DxvkDsStencilOp&                dsBack);
 
     /**
      * \brief Registers a newly compiled shader

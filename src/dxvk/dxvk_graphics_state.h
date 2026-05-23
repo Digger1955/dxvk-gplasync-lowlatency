@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dxvk_format.h"
 #include "dxvk_limits.h"
 
 #include <cstring>
@@ -219,14 +220,12 @@ namespace dxvk {
 
     DxvkRsInfo(
             VkBool32              depthClipEnable,
-            VkBool32              depthBiasEnable,
             VkPolygonMode         polygonMode,
             VkSampleCountFlags    sampleCount,
             VkConservativeRasterizationModeEXT conservativeMode,
             VkBool32              flatShading,
             VkLineRasterizationModeEXT lineMode)
     : m_depthClipEnable (uint16_t(depthClipEnable)),
-      m_depthBiasEnable (uint16_t(depthBiasEnable)),
       m_polygonMode     (uint16_t(polygonMode)),
       m_sampleCount     (uint16_t(sampleCount)),
       m_conservativeMode(uint16_t(conservativeMode)),
@@ -236,10 +235,6 @@ namespace dxvk {
     
     VkBool32 depthClipEnable() const {
       return VkBool32(m_depthClipEnable);
-    }
-
-    VkBool32 depthBiasEnable() const {
-      return VkBool32(m_depthBiasEnable);
     }
 
     VkPolygonMode polygonMode() const {
@@ -269,13 +264,12 @@ namespace dxvk {
   private:
 
     uint16_t m_depthClipEnable        : 1;
-    uint16_t m_depthBiasEnable        : 1;
     uint16_t m_polygonMode            : 2;
     uint16_t m_sampleCount            : 5;
     uint16_t m_conservativeMode       : 2;
     uint16_t m_flatShading            : 1;
     uint16_t m_lineMode               : 2;
-    uint16_t m_reserved               : 2;
+    uint16_t m_reserved               : 3;
   
   };
 
@@ -766,16 +760,17 @@ namespace dxvk {
       return !bit::bcmpeq(this, &other);
     }
 
-    bool useDynamicStencilRef() const {
-      return ds.enableStencilTest();
-    }
-
-    bool useDynamicDepthBias() const {
-      return rs.depthBiasEnable();
+    bool useDynamicDepthTest() const {
+      return rt.getDepthStencilFormat();
     }
 
     bool useDynamicDepthBounds() const {
-      return ds.enableDepthBoundsTest();
+      return rt.getDepthStencilFormat();
+    }
+
+    bool useDynamicStencilTest() const {
+      auto format = rt.getDepthStencilFormat();
+      return format && (lookupFormatInfo(format)->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT);
     }
 
     bool useDynamicVertexStrides() const {
@@ -826,12 +821,9 @@ namespace dxvk {
     DxvkIlInfo              il;
     DxvkRsInfo              rs;
     DxvkMsInfo              ms;
-    DxvkDsInfo              ds;
     DxvkOmInfo              om;
     DxvkRtInfo              rt;
     DxvkScInfo              sc;
-    DxvkDsStencilOp         dsFront;
-    DxvkDsStencilOp         dsBack;
     DxvkOmAttachmentSwizzle omSwizzle         [DxvkLimits::MaxNumRenderTargets];
     DxvkOmAttachmentBlend   omBlend           [DxvkLimits::MaxNumRenderTargets];
     DxvkIlAttribute         ilAttributes      [DxvkLimits::MaxNumVertexAttributes];

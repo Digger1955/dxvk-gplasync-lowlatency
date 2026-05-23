@@ -2324,7 +2324,6 @@ namespace dxvk {
       const bool     isIntel             = vendorId == uint32_t(DxvkGpuVendor::Intel);
 
       const bool     oldClipPlaneEnabled = IsClipPlaneEnabled();
-      const bool     oldDepthBiasEnabled = IsDepthBiasEnabled();
       const bool     oldATOC             = !m_isD3D8Compatible ? IsAlphaToCoverageEnabled() : false;
       const bool     oldNVDB             = !m_isD3D8Compatible ? states[D3DRS_ADAPTIVETESS_X] == uint32_t(D3D9Format::NVDB) : false;
       const bool     oldAlphaTest        = IsAlphaTestEnabled();
@@ -2524,14 +2523,7 @@ namespace dxvk {
 
         case D3DRS_DEPTHBIAS:
         case D3DRS_SLOPESCALEDEPTHBIAS: {
-          const bool depthBiasEnabled = IsDepthBiasEnabled();
-
-          if (depthBiasEnabled != oldDepthBiasEnabled)
-            m_flags.set(D3D9DeviceFlag::DirtyRasterizerState);
-
-          if (depthBiasEnabled)
-            m_flags.set(D3D9DeviceFlag::DirtyDepthBias);
-
+          m_flags.set(D3D9DeviceFlag::DirtyDepthBias);
           break;
         }
         case D3DRS_CULLMODE:
@@ -7242,7 +7234,6 @@ namespace dxvk {
 
     DxvkRasterizerState state = { };
     state.setCullMode(DecodeCullMode(D3DCULL(rs[D3DRS_CULLMODE])));
-    state.setDepthBias(IsDepthBiasEnabled());
     state.setDepthClip(true);
     state.setFrontFace(VK_FRONT_FACE_CLOCKWISE);
     state.setPolygonMode(DecodeFillMode(D3DFILLMODE(rs[D3DRS_FILLMODE])));
@@ -7659,9 +7650,10 @@ namespace dxvk {
       m_flags.clr(D3D9DeviceFlag::DirtyDepthBounds);
 
       DxvkDepthBounds db = { };
-      db.enableDepthBounds  = (m_state.renderStates[D3DRS_ADAPTIVETESS_X] == uint32_t(D3D9Format::NVDB));
+      db.minDepthBounds = 0.0f;
+      db.maxDepthBounds = 1.0f;
 
-      if (db.enableDepthBounds) {
+      if (m_state.renderStates[D3DRS_ADAPTIVETESS_X] == uint32_t(D3D9Format::NVDB)) {
         db.minDepthBounds = std::clamp(bit::cast<float>(m_state.renderStates[D3DRS_ADAPTIVETESS_Z]), 0.0f, 1.0f);
         db.maxDepthBounds = std::clamp(bit::cast<float>(m_state.renderStates[D3DRS_ADAPTIVETESS_W]), 0.0f, 1.0f);
 

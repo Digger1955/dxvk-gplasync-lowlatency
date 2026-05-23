@@ -2186,6 +2186,10 @@ namespace dxvk {
 
     void endActiveDebugRegions();
 
+    static VkStencilOpState convertStencilOp(
+      const DxvkStencilOp&            op,
+            bool                      writable);
+
     static bool formatsAreCopyCompatible(
             VkFormat                  imageFormat,
             VkFormat                  bufferFormat);

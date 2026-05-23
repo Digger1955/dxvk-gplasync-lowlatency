@@ -548,7 +548,6 @@ namespace dxvk {
     // Set up basic rasterization state
     rsInfo.depthClampEnable         = VK_TRUE;
     rsInfo.polygonMode              = state.rs.polygonMode();
-    rsInfo.depthBiasEnable          = state.rs.depthBiasEnable();
     rsInfo.lineWidth                = 1.0f;
 
     // Set up rasterized stream depending on geometry shader state.
@@ -678,18 +677,6 @@ namespace dxvk {
   DxvkGraphicsPipelineFragmentShaderState::DxvkGraphicsPipelineFragmentShaderState(
     const DxvkDevice*                     device,
     const DxvkGraphicsPipelineStateInfo&  state) {
-    VkImageAspectFlags dsReadOnlyAspects = state.rt.getDepthStencilReadOnlyAspects();
-
-    bool enableDepthWrites = !(dsReadOnlyAspects & VK_IMAGE_ASPECT_DEPTH_BIT);
-    bool enableStencilWrites = !(dsReadOnlyAspects & VK_IMAGE_ASPECT_STENCIL_BIT);
-
-    dsInfo.depthTestEnable        = state.ds.enableDepthTest();
-    dsInfo.depthWriteEnable       = state.ds.enableDepthWrite() && enableDepthWrites;
-    dsInfo.depthCompareOp         = state.ds.depthCompareOp();
-    dsInfo.depthBoundsTestEnable  = state.ds.enableDepthBoundsTest();
-    dsInfo.stencilTestEnable      = state.ds.enableStencilTest();
-    dsInfo.front                  = state.dsFront.state(enableStencilWrites);
-    dsInfo.back                   = state.dsBack.state(enableStencilWrites);
   }
 
 
@@ -764,24 +751,36 @@ namespace dxvk {
     dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT;
     dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT;
 
+    if (!flags.test(DxvkGraphicsPipelineFlag::HasRasterizerDiscard)) {
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_BIAS;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_CULL_MODE;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_FRONT_FACE;
+    }
+
     if (state.useDynamicVertexStrides())
       dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE;
 
-    if (state.useDynamicDepthBias())
-      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_BIAS;
-    
-    if (state.useDynamicDepthBounds())
+    if (state.useDynamicDepthBounds() && device->features().core.features.depthBounds) {
       dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_BOUNDS;
-    
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE;
+    }
+
     if (state.useDynamicBlendConstants())
       dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_BLEND_CONSTANTS;
-    
-    if (state.useDynamicStencilRef())
-      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_REFERENCE;
 
-    if (!flags.test(DxvkGraphicsPipelineFlag::HasRasterizerDiscard)) {
-      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_CULL_MODE;
-      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_FRONT_FACE;
+    if (state.useDynamicDepthTest()) {
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_COMPARE_OP;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE;
+    }
+
+    if (state.useDynamicStencilTest()) {
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_OP;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_REFERENCE;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
     }
 
     if (dyInfo.dynamicStateCount)
@@ -1060,7 +1059,8 @@ namespace dxvk {
 
   DxvkGraphicsPipelineHandle DxvkGraphicsPipeline::getPipelineHandle(
         const DxvkGraphicsPipelineStateInfo& state,
-        const bool                         async) {
+        const bool                           async,
+        const DxvkDepthStencilState&         dynDs) {
     DxvkGraphicsPipelineInstance* instance = this->findInstance(state);
 
     if (unlikely(!instance)) {
@@ -1101,7 +1101,7 @@ namespace dxvk {
         // Only store pipelines in the state cache that cannot benefit
         // from pipeline libraries, or if that feature is disabled.
         if (!canCreateBasePipeline)
-          this->writePipelineStateToCache(state);
+          this->writePipelineStateToCache(state, dynDs);
       }
     }
 
@@ -1151,7 +1151,7 @@ namespace dxvk {
 
     //Write pipeline to state cache
     if (gplAsyncCache)
-      this->writePipelineStateToCache(state);
+       this->writePipelineStateToCache(state, { });
   }
 
 
@@ -1526,37 +1526,7 @@ namespace dxvk {
       }
     }
 
-    // Check depth buffer access
-    auto depthFormat = state.rt.getDepthStencilFormat();
-
-    if (depthFormat) {
-      auto dsReadable = lookupFormatInfo(depthFormat)->aspectMask;
-      auto dsWritable = dsReadable & ~state.rt.getDepthStencilReadOnlyAspects();
-
-      if (dsReadable & VK_IMAGE_ASPECT_DEPTH_BIT) {
-        if (state.ds.enableDepthBoundsTest())
-          result.trackDepthRead();
-
-        if (state.ds.enableDepthTest()) {
-          result.trackDepthRead();
-
-          if (state.ds.enableDepthWrite() && (dsWritable & VK_IMAGE_ASPECT_DEPTH_BIT))
-            result.trackDepthWrite();
-        }
-      }
-
-      if (dsReadable & VK_IMAGE_ASPECT_STENCIL_BIT) {
-        if (state.ds.enableStencilTest()) {
-          auto f = state.dsFront.state(dsWritable & VK_IMAGE_ASPECT_STENCIL_BIT);
-          auto b = state.dsBack.state(dsWritable & VK_IMAGE_ASPECT_STENCIL_BIT);
-
-          result.trackStencilRead();
-
-          if (f.writeMask | b.writeMask)
-            result.trackStencilWrite();
-        }
-      }
-    }
+    // Depth buffer access is tracked by the command list
 
     return result;
   }
@@ -1626,10 +1596,6 @@ namespace dxvk {
         return false;
     }
 
-    // Validate depth-stencil state
-    if (state.ds.enableDepthBoundsTest() && !m_device->features().core.features.depthBounds)
-      return false;
-
     // Validate render target format support
     VkFormat depthFormat = state.rt.getDepthStencilFormat();
 
@@ -1662,7 +1628,8 @@ namespace dxvk {
   
   
   void DxvkGraphicsPipeline::writePipelineStateToCache(
-    const DxvkGraphicsPipelineStateInfo& state) const {
+    const DxvkGraphicsPipelineStateInfo& state,
+    const DxvkDepthStencilState&         dynDs) const {
     DxvkStateCacheKey key;
     if (m_shaders.vs  != nullptr) key.vs = m_shaders.vs->getShaderKey();
     if (m_shaders.tcs != nullptr) key.tcs = m_shaders.tcs->getShaderKey();
@@ -1670,7 +1637,34 @@ namespace dxvk {
     if (m_shaders.gs  != nullptr) key.gs = m_shaders.gs->getShaderKey();
     if (m_shaders.fs  != nullptr) key.fs = m_shaders.fs->getShaderKey();
 
-    m_stateCache->addGraphicsPipeline(key, state);
+    // Normalise state for cache serialisation.
+    // ds/dsFront/dsBack removed from live DxvkGraphicsPipelineStateInfo;
+    // setDepthStencilState() only writes m_state.dyn.depthStencilState.
+    // Synthesise them here from the single authoritative source.
+    // ilBindings strides zeroed: dynamic vertex strides (v15+) must not
+    // vary the SHA-1 key across draw calls.
+    DxvkGraphicsPipelineStateInfo cacheState = state;
+    const uint32_t bindingCount = cacheState.il.bindingCount();
+    for (uint32_t i = 0; i < bindingCount && i < MaxNumVertexBindings; i++)
+      cacheState.ilBindings[i].setStride(0);
+
+    DxvkDsInfo dsInfo(
+      dynDs.depthTest(),
+      dynDs.depthWrite(),
+      VK_FALSE,
+      dynDs.stencilTest(),
+      dynDs.depthCompareOp());
+
+    auto makeStencilOp = [](const DxvkStencilOp& op) {
+      return DxvkDsStencilOp(
+        op.failOp(), op.passOp(), op.depthFailOp(),
+        op.compareOp(), op.compareMask(), op.writeMask());
+    };
+
+    m_stateCache->addGraphicsPipeline(key, cacheState,
+      dsInfo,
+      makeStencilOp(dynDs.stencilOpFront()),
+      makeStencilOp(dynDs.stencilOpBack()));
   }
   
   
@@ -1710,7 +1704,6 @@ namespace dxvk {
     // Log rasterizer state
     sstr << "Rasterizer state:" << std::endl
          << "  depth clip:      " << (state.rs.depthClipEnable() ? "yes" : "no") << std::endl
-         << "  depth bias:      " << (state.rs.depthBiasEnable() ? "yes" : "no") << std::endl
          << "  polygon mode:    " << state.rs.polygonMode() << std::endl
          << "  conservative:    " << (state.rs.conservativeMode() == VK_CONSERVATIVE_RASTERIZATION_MODE_DISABLED_EXT ? "no" : "yes") << std::endl;
 
@@ -1724,30 +1717,6 @@ namespace dxvk {
 
     sstr << "Sample count: " << sampleCount << " [0x" << std::hex << state.ms.sampleMask() << std::dec << "]" << std::endl
          << "  alphaToCoverage: " << (state.ms.enableAlphaToCoverage() ? "yes" : "no") << std::endl;
-
-    // Log depth-stencil state
-    sstr << "Depth test:        ";
-
-    if (state.ds.enableDepthTest())
-      sstr << "yes [write: " << (state.ds.enableDepthWrite() ? "yes" : "no") << ", op: " << state.ds.depthCompareOp() << "]" << std::endl;
-    else
-      sstr << "no" << std::endl;
-
-    sstr << "Depth bounds test: " << (state.ds.enableDepthBoundsTest() ? "yes" : "no") << std::endl
-         << "Stencil test:      " << (state.ds.enableStencilTest() ? "yes" : "no") << std::endl;
-
-    if (state.ds.enableStencilTest()) {
-      std::array<VkStencilOpState, 2> states = {{
-        state.dsFront.state(true),
-        state.dsBack.state(true),
-      }};
-
-      for (size_t i = 0; i < states.size(); i++) {
-        sstr << std::hex << (i ? "  back:  " : "  front: ")
-             << "[c=0x" << states[i].compareMask << ",w=0x" << states[i].writeMask << ",op=" << states[i].compareOp << "] "
-             << "fail=" << states[i].failOp << ",pass=" << states[i].passOp << ",depthFail=" << states[i].depthFailOp << std::dec << std::endl;
-      }
-    }
 
     // Log logic op state
     sstr << "Logic op:          ";

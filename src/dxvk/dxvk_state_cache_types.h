@@ -47,6 +47,12 @@ namespace dxvk {
     DxvkStateCacheEntryType       type;
     DxvkStateCacheKey             shaders;
     DxvkGraphicsPipelineStateInfo gpState;
+    // DS state separated from gpState: setDepthStencilState() only writes
+    // m_state.dyn.depthStencilState, never gpState.ds/dsFront/dsBack.
+    // Synthesised at write time from dyn state; no runtime duplicate.
+    DxvkDsInfo                    gpDs;
+    DxvkDsStencilOp               gpDsFront;
+    DxvkDsStencilOp               gpDsBack;
     Sha1Hash                      hash;
   };
 
@@ -126,7 +132,6 @@ namespace dxvk {
   public:
 
     uint32_t m_depthClipEnable        : 1;
-    uint32_t m_depthBiasEnable        : 1;
     uint32_t m_polygonMode            : 2;
     uint32_t m_cullMode               : 2;
     uint32_t m_frontFace              : 1;
@@ -138,7 +143,6 @@ namespace dxvk {
     DxvkRsInfo convert() const {
       return DxvkRsInfo(
         VkBool32(m_depthClipEnable),
-        VkBool32(m_depthBiasEnable),
         VkPolygonMode(m_polygonMode),
         VkSampleCountFlags(m_sampleCount),
         VkConservativeRasterizationModeEXT(m_conservativeMode),
@@ -153,7 +157,6 @@ namespace dxvk {
   public:
 
     uint16_t m_depthClipEnable        : 1;
-    uint16_t m_depthBiasEnable        : 1;
     uint16_t m_polygonMode            : 2;
     uint16_t m_cullMode               : 2;
     uint16_t m_frontFace              : 1;
@@ -164,7 +167,6 @@ namespace dxvk {
     DxvkRsInfo convert() const {
       return DxvkRsInfo(
         VkBool32(m_depthClipEnable),
-        VkBool32(m_depthBiasEnable),
         VkPolygonMode(m_polygonMode),
         VkSampleCountFlags(m_sampleCount),
         VkConservativeRasterizationModeEXT(m_conservativeMode),
