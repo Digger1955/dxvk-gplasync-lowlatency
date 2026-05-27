@@ -4,6 +4,7 @@ namespace dxvk {
 
   DxvkOptions::DxvkOptions(const Config& config) {
     gplAsyncCache = config.getOption<bool>("dxvk.gplAsyncCache", true);
+    dyasyncStrideFallback = config.getOption<bool>("dxvk.dyasyncStrideFallback", true);
     enableAsync           = config.getOption<bool>    ("dxvk.enableAsync",            true);
     enableDebugUtils      = config.getOption<bool>    ("dxvk.enableDebugUtils",       false);
     enableStateCache      = config.getOption<bool>    ("dxvk.enableStateCache",       true);

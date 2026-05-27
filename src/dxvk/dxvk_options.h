@@ -38,6 +38,24 @@ namespace dxvk {
     // Enable state cache with gpl and fixes for async
     bool gplAsyncCache;
 
+    /// dyasync-style stride-normalised stand-in (default: true).
+    ///
+    /// When a live draw call misses findInstance() because its ilBinding strides
+    /// differ from the stride-0 entries stored by the state cache (PR #81 zeroes
+    /// strides on write), this option enables the following behaviour:
+    ///
+    ///   1. Zero the live strides to produce a normalised state.
+    ///   2. Call findInstance(normalisedState).
+    ///   3. If a compiled instance exists, return its handle immediately as a
+    ///      temporary stand-in (geometry is always visible, possible 1-frame
+    ///      visual difference -- same trade-off as dyasync in DXVK-Sarek).
+    ///   4. Queue the exact live-stride variant at High priority.
+    ///   5. When compilation finishes, future calls return the exact pipeline.
+    ///
+    /// Equivalent to dyasync FallbackMap in pythonlover02/DXVK-Sarek
+    /// (old-main-dyasync), adapted to the GPLALL stride-normalisation axis.
+    bool dyasyncStrideFallback;
+
     /// Shader-related options
     Tristate useRawSsbo = Tristate::Auto;
 
