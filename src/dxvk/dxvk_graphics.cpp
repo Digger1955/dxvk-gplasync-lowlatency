@@ -1146,11 +1146,26 @@ namespace dxvk {
             standInHandle = strideMatch->baseHandle.load(std::memory_order_acquire);
 
           if (standInHandle != VK_NULL_HANDLE) {
-            // Queue exact live-stride variant at High priority.
-            // writePipelineStateToCache writes stride=0 -- the cache already has
-            // this entry from the initial preload, so no duplicate is written.
-            this->acquirePipeline();
-            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::High);
+            // Return the stand-in immediately -- never block the draw thread.
+            //
+            // Dispatch the exact live-stride variant for async compilation at
+            // Normal priority (same as the state cache preload worker).  This
+            // avoids the CPU pressure caused by High-priority dispatch:
+            //
+            //   High  → worker threads promoted, competes with application CPU
+            //           budget; saturates queue when many shader sets fire at once
+            //   Normal → worker threads stay at Lowest OS priority; compiled
+            //            in background without impacting the application
+            //
+            // acquirePipeline() is intentionally NOT called here.  The pipeline
+            // lifetime tracking mutex is only needed when the pipeline may be
+            // destroyed mid-use; during normal async compilation the instance is
+            // retained by m_pipelines and requires no extra ref-count.
+            //
+            // writePipelineStateToCache is also skipped: PR #81 normalises
+            // strides to 0 on write, so the cache already contains this entry
+            // from the initial preload.
+            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Normal);
 
             DxvkGraphicsPipelineHandle result;
             result.handle      = standInHandle;
