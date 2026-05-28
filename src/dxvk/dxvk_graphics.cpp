@@ -1165,7 +1165,7 @@ namespace dxvk {
             // writePipelineStateToCache is also skipped: PR #81 normalises
             // strides to 0 on write, so the cache already contains this entry
             // from the initial preload.
-            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Low);
+            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Normal);
 
             DxvkGraphicsPipelineHandle result;
             result.handle      = standInHandle;
@@ -1192,14 +1192,14 @@ namespace dxvk {
             instance = this->createInstance(state, /*doCreateBasePipeline=*/true);
             lock.unlock();
             m_async.store(true, std::memory_order_release);
-            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Low);
+            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Normal);
             return instance->getHandle();
           }
 
           m_async.store(true, std::memory_order_release);
           lock.unlock();
 
-          m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Low);
+          m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Normal);
 
           return DxvkGraphicsPipelineHandle();
         }
