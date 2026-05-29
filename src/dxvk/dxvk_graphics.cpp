@@ -1064,150 +1064,74 @@ namespace dxvk {
 
 
 
-  // DxvkGraphicsPipeline::findStrideNormalisedInstance
-  //
-  // dyasync-style stride-normalised stand-in
-  // (pythonlover02/DXVK-Sarek, old-main-dyasync, adapted for GPLALL).
-  //
-  // Problem:
-  //   The state cache writes all ilBinding strides as 0 (PR #81).  After
-  //   preload, compiled instances in m_pipelines carry stride=0 in their
-  //   stored state.  A live draw call whose strides differ misses
-  //   findInstance() even though the compiled VkPipeline is functionally
-  //   identical for pipelines that use
-  //   VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE -- the stride is
-  //   applied dynamically by the command buffer, not baked into the pipeline.
-  //
-  // Solution (mirrors dyasync FallbackMap in DXVK-Sarek):
-  //   Zero the live strides → call findInstance(normalisedState).
-  //   If an instance is found, its VkPipeline is valid as a stand-in for
-  //   this draw call.  The exact live-stride state is then queued for async
-  //   compilation at High priority.  When it completes, future draw calls
-  //   find the exact instance and the stand-in is no longer used.
-  //
-  // Guard: only applied when useDynamicVertexStrides() is true on the live
-  // state, ensuring we never return a baked-stride pipeline for a draw call
-  // that expects a different baked stride.
-  DxvkGraphicsPipelineInstance* DxvkGraphicsPipeline::findStrideNormalisedInstance(
-    const DxvkGraphicsPipelineStateInfo& liveState) {
-    // Only valid for pipelines using dynamic vertex strides.
-    if (!liveState.useDynamicVertexStrides())
-      return nullptr;
-
-    // Build a normalised copy with all binding strides zeroed -- this matches
-    // how the state was stored when the cache entry was preloaded.
-    DxvkGraphicsPipelineStateInfo normState = liveState;
-    const uint32_t bindingCount = normState.il.bindingCount();
-    for (uint32_t i = 0; i < bindingCount && i < MaxNumVertexBindings; i++)
-      normState.ilBindings[i].setStride(0);
-
-    return this->findInstance(normState);
-  }
 
 
-  DxvkGraphicsPipelineHandle DxvkGraphicsPipeline::getPipelineHandle(
+    DxvkGraphicsPipelineHandle DxvkGraphicsPipeline::getPipelineHandle(
     const DxvkGraphicsPipelineStateInfo& state,
     const bool                           async,
     const DxvkDepthStencilState&         dynDs) {
-    DxvkGraphicsPipelineInstance* instance = this->findInstance(state);
+    // When VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE is used, strides
+    // are not baked into the VkPipeline.  PR #81 zeroes all ilBinding
+    // strides on cache write so that the SHA-1 key is stride-independent.
+    // Normalising here makes findInstance() find the preloaded (stride=0)
+    // instance directly -- it IS the correct pipeline for any live stride.
+    // No recompilation and no stand-in are needed.
+    const bool useNormaliseStrides =
+        m_device->config().normaliseVertexStrides
+     && (m_device->config().gplAsyncCache
+         || (m_device->config().enableAsync
+             && env::getEnvVar("DXVK_ASYNC") != "0"));
+
+    DxvkGraphicsPipelineStateInfo normState;
+    if (useNormaliseStrides && state.il.bindingCount() > 0
+     && !state.useDynamicVertexStrides()) {
+      normState = state;
+      for (uint32_t i = 0; i < state.il.bindingCount(); i++)
+        normState.ilBindings[i].setStride(0);
+    }
+    const DxvkGraphicsPipelineStateInfo& lookupState =
+        (useNormaliseStrides && state.il.bindingCount() > 0
+         && !state.useDynamicVertexStrides())
+        ? normState : state;
+
+    DxvkGraphicsPipelineInstance* instance = this->findInstance(lookupState);
 
     if (unlikely(!instance)) {
       // Exit early if the state vector is invalid
-      if (!this->validatePipelineState(state, true))
+      if (!this->validatePipelineState(lookupState, true))
         return DxvkGraphicsPipelineHandle();
 
-      // ── DYASYNC STRIDE-NORMALISED STAND-IN ────────────────────────────────────
-      // Adapted from dyasync in pythonlover02/DXVK-Sarek (old-main-dyasync).
-      //
-      // When gplAsyncCache or enableAsync is active, the state cache stores
-      // entries with stride=0 (PR #81 normalisation).  A live draw call that
-      // differs only in ilBinding strides misses findInstance() above.
-      //
-      // We now check whether a stride-normalised match exists in m_pipelines:
-      //   - If yes: that compiled pipeline is valid as a stand-in (strides are
-      //     dynamic, not baked).  Return it immediately, queue the exact variant
-      //     at High priority.  When async compilation finishes, future calls to
-      //     findInstance(liveState) find the exact instance automatically.
-      //   - If no:  fall through to the normal useAsync / synchronous paths.
-      //
-      // In DXVK-Sarek dyasync, the stand-in is keyed per-renderPass (FallbackMap).
-      // Here the stand-in is the specific cache-preloaded instance whose state
-      // differs from the live state only in ilBinding strides -- a tighter match.
-      if (m_device->config().dyasyncStrideFallback
-       && (m_device->config().gplAsyncCache
-           || (m_device->config().enableAsync
-               && env::getEnvVar("DXVK_ASYNC") != "0"))) {
-        DxvkGraphicsPipelineInstance* strideMatch =
-          this->findStrideNormalisedInstance(state);
-
-        if (strideMatch != nullptr) {
-          VkPipeline standInHandle = strideMatch->fastHandle.load(std::memory_order_acquire);
-          if (standInHandle == VK_NULL_HANDLE)
-            standInHandle = strideMatch->baseHandle.load(std::memory_order_acquire);
-
-          if (standInHandle != VK_NULL_HANDLE) {
-            // Return the stand-in immediately -- never block the draw thread.
-            //
-            // Dispatch the exact live-stride variant for async compilation at
-            // Normal priority (same as the state cache preload worker).  This
-            // avoids the CPU pressure caused by High-priority dispatch:
-            //
-            //   High  → worker threads promoted, competes with application CPU
-            //           budget; saturates queue when many shader sets fire at once
-            //   Normal → worker threads stay at Lowest OS priority; compiled
-            //            in background without impacting the application
-            //
-            // acquirePipeline() is intentionally NOT called here.  The pipeline
-            // lifetime tracking mutex is only needed when the pipeline may be
-            // destroyed mid-use; during normal async compilation the instance is
-            // retained by m_pipelines and requires no extra ref-count.
-            //
-            // writePipelineStateToCache is also skipped: PR #81 normalises
-            // strides to 0 on write, so the cache already contains this entry
-            // from the initial preload.
-            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Normal);
-
-            DxvkGraphicsPipelineHandle result;
-            result.handle      = standInHandle;
-            result.type        = DxvkGraphicsPipelineType::FastPipeline;
-            result.attachments = strideMatch->attachments;
-            return result;
-          }
-        }
-      }
-      // ─────────────────────────────────────────────────────────────────────────
-
-      const bool useAsync = async && m_device->config().enableAsync && env::getEnvVar("DXVK_ASYNC") != "0";
+            const bool useAsync = async && m_device->config().enableAsync && env::getEnvVar("DXVK_ASYNC") != "0";
 
       // Prevent other threads from adding new instances and check again
       std::unique_lock<dxvk::mutex> lock(useAsync ? m_asyncMutex : m_mutex);
-      instance = this->findInstance(state);
+      instance = this->findInstance(lookupState);
 
       if (!instance) {
         if (useAsync) {
           // When GPL is available, create a base instance immediately so that
           // m_pipelines is non-empty; subsequent variant misses above will then
           // find it via findStrideNormalisedInstance and avoid null handles.
-          if (this->canCreateBasePipeline(state)) {
-            instance = this->createInstance(state, /*doCreateBasePipeline=*/true);
+          if (this->canCreateBasePipeline(lookupState)) {
+            instance = this->createInstance(lookupState, /*doCreateBasePipeline=*/true);
             lock.unlock();
             m_async.store(true, std::memory_order_release);
-            m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Normal);
+            m_workers->compileGraphicsPipeline(this, lookupState, DxvkPipelinePriority::High);
             return instance->getHandle();
           }
 
           m_async.store(true, std::memory_order_release);
           lock.unlock();
 
-          m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Normal);
+          m_workers->compileGraphicsPipeline(this, lookupState, DxvkPipelinePriority::High);
 
           return DxvkGraphicsPipelineHandle();
         }
 
         // Keep pipeline object locked, at worst we're going to stall
         // a state cache worker and the current thread needs priority.
-        bool canCreateBasePipeline = this->canCreateBasePipeline(state);
-        instance = this->createInstance(state, canCreateBasePipeline);
+        bool canCreateBasePipeline = this->canCreateBasePipeline(lookupState);
+        instance = this->createInstance(lookupState, canCreateBasePipeline);
 
         // Unlock here since we may dispatch the pipeline to a worker,
         // which will then acquire it to increment the use counter.
@@ -1215,12 +1139,12 @@ namespace dxvk {
 
         // If necessary, compile an optimized pipeline variant
         if (!instance->fastHandle.load())
-          m_workers->compileGraphicsPipeline(this, state, DxvkPipelinePriority::Low);
+          m_workers->compileGraphicsPipeline(this, lookupState, DxvkPipelinePriority::Low);
 
         // Only store pipelines in the state cache that cannot benefit
         // from pipeline libraries, or if that feature is disabled.
         if (!canCreateBasePipeline)
-          this->writePipelineStateToCache(state, dynDs);
+          this->writePipelineStateToCache(lookupState, dynDs);
       }
     }
 

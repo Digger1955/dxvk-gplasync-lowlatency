@@ -690,37 +690,7 @@ namespace dxvk {
       const DxvkGraphicsPipelineStateInfo& state,
       const DxvkDepthStencilState&         dynDs) const;
 
-    /**
-     * \brief Find a stride-normalised stand-in instance.
-     *
-     * dyasync principle (pythonlover02/DXVK-Sarek, old-main-dyasync):
-     *   On a variant miss caused solely by differing vertex binding strides,
-     *   use any already-compiled instance whose state matches after zeroing
-     *   all ilBinding strides as a temporary stand-in.
-     *
-     * Background:
-     *   PR #81 zeroes strides when writing to the state cache so that the
-     *   cache SHA-1 key is stable across draw calls.  After preload the
-     *   compiled instances in m_pipelines have stride=0 in their stored
-     *   state.  A live draw call that differs only in stride therefore
-     *   misses findInstance() even though the compiled pipeline is
-     *   functionally identical for pipelines using
-     *   VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE (useDynamicVertexStrides).
-     *
-     * Algorithm:
-     *   1. Check useDynamicVertexStrides() on the incoming live state -- only
-     *      these pipelines use dynamic strides so the stand-in is valid.
-     *   2. Copy live state, zero all ilBinding strides.
-     *   3. Call findInstance(normalisedState).
-     *   4. Return the matched instance (or nullptr if none compiled yet).
-     *
-     * \param [in] liveState  The exact state from the current draw call.
-     * \returns Pointer to an existing compiled instance, or nullptr.
-     */
-    DxvkGraphicsPipelineInstance* findStrideNormalisedInstance(
-      const DxvkGraphicsPipelineStateInfo& liveState);
-
-    void logPipelineState(
+        void logPipelineState(
             LogLevel                       level,
       const DxvkGraphicsPipelineStateInfo& state) const;
 
