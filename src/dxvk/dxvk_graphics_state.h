@@ -752,12 +752,13 @@ namespace dxvk {
       return *this;
     }
     
-    bool operator == (const DxvkGraphicsPipelineStateInfo& other) const {
+    bool eq(const DxvkGraphicsPipelineStateInfo& other) const {
       return bit::bcmpeq(this, &other);
     }
 
-    bool operator != (const DxvkGraphicsPipelineStateInfo& other) const {
-      return !bit::bcmpeq(this, &other);
+    size_t hash() const {
+      auto src = reinterpret_cast<const unsigned char*>(this);
+      return size_t(bit::fnv1a_hash(src, sizeof(*this)));
     }
 
     bool useDynamicDepthTest() const {
@@ -848,14 +849,15 @@ namespace dxvk {
       return *this;
     }
     
-    bool operator == (const DxvkComputePipelineStateInfo& other) const {
+    bool eq(const DxvkComputePipelineStateInfo& other) const {
       return bit::bcmpeq(this, &other);
     }
 
-    bool operator != (const DxvkComputePipelineStateInfo& other) const {
-      return !bit::bcmpeq(this, &other);
+    size_t hash() const {
+      auto src = reinterpret_cast<const unsigned char*>(this);
+      return size_t(bit::fnv1a_hash(src, sizeof(*this)));
     }
-    
+
     DxvkScInfo              sc;
   };
 
