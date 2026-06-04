@@ -329,7 +329,7 @@ namespace dxvk {
     for (auto e = entries.first; e != entries.second; e++) {
       const auto& entry = m_entries[e->second];
       if (entry.type == DxvkStateCacheEntryType::MonolithicPipeline
-       && entry.gpState   == state
+       && entry.gpState.eq(state)
        && !std::memcmp(&entry.gpDs,      &ds,      sizeof(ds))
        && !std::memcmp(&entry.gpDsFront, &dsFront, sizeof(dsFront))
        && !std::memcmp(&entry.gpDsBack,  &dsBack,  sizeof(dsBack)))

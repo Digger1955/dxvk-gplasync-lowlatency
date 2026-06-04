@@ -2,8 +2,6 @@
 
 #include <vector>
 
-#include "../util/sync/sync_list.h"
-
 #include "dxvk_bind_mask.h"
 #include "dxvk_graphics_state.h"
 #include "dxvk_pipelayout.h"
@@ -39,13 +37,10 @@ namespace dxvk {
    */
   struct DxvkComputePipelineInstance {
     DxvkComputePipelineInstance() { }
-    DxvkComputePipelineInstance(
-      const DxvkComputePipelineStateInfo& state_,
-            VkPipeline                    handle_)
-    : state(state_), handle(handle_) { }
+    DxvkComputePipelineInstance(VkPipeline handle_)
+    : handle(handle_) { }
 
-    DxvkComputePipelineStateInfo state;
-    VkPipeline                   handle = VK_NULL_HANDLE;
+    VkPipeline handle = VK_NULL_HANDLE;
   };
   
   
@@ -146,17 +141,19 @@ namespace dxvk {
 
     alignas(CACHE_LINE_SIZE)
     dxvk::mutex                             m_mutex;
-    sync::List<DxvkComputePipelineInstance> m_pipelines;
-    
+    DxvkPipelineVariantTable<
+      DxvkComputePipelineStateInfo,
+      DxvkComputePipelineInstance>          m_pipelines;
+
     DxvkComputePipelineInstance* createInstance(
       const DxvkComputePipelineStateInfo& state);
-    
+
     DxvkComputePipelineInstance* findInstance(
       const DxvkComputePipelineStateInfo& state);
-    
+
     VkPipeline createPipeline(
       const DxvkComputePipelineStateInfo& state) const;
-    
+
     void destroyPipeline(
             VkPipeline                    pipeline);
 
