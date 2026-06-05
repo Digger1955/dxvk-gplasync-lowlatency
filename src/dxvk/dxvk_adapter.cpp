@@ -257,6 +257,7 @@ namespace dxvk {
         && CHECK_FEATURE_NEED(extRobustness2.robustBufferAccess2)
         && CHECK_FEATURE_NEED(extRobustness2.robustImageAccess2)
         && CHECK_FEATURE_NEED(extRobustness2.nullDescriptor)
+        && CHECK_FEATURE_NEED(extSampleLocations)
         && CHECK_FEATURE_NEED(extShaderModuleIdentifier.shaderModuleIdentifier)
         && CHECK_FEATURE_NEED(extShaderStencilExport)
         && CHECK_FEATURE_NEED(extSwapchainColorSpace)
@@ -395,6 +396,10 @@ namespace dxvk {
       m_deviceFeatures.extExtendedDynamicState3.extendedDynamicState3SampleMask;
     enabledFeatures.extExtendedDynamicState3.extendedDynamicState3LineRasterizationMode =
       m_deviceFeatures.extExtendedDynamicState3.extendedDynamicState3LineRasterizationMode;
+
+    // Used with VK_EXT_sample_locations
+    enabledFeatures.extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable =
+      m_deviceFeatures.extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable;
 
     // Used for both pNext shader module info, and fast-linking pipelines provided
     // that graphicsPipelineLibraryIndependentInterpolationDecoration is supported
@@ -842,6 +847,11 @@ namespace dxvk {
       m_deviceInfo.extMultiDraw.pNext = std::exchange(m_deviceInfo.core.pNext, &m_deviceInfo.extMultiDraw);
     }
 
+    if (m_deviceExtensions.supports(VK_EXT_SAMPLE_LOCATIONS_EXTENSION_NAME)) {
+      m_deviceInfo.extSampleLocations.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLE_LOCATIONS_PROPERTIES_EXT;
+      m_deviceInfo.extSampleLocations.pNext = std::exchange(m_deviceInfo.core.pNext, &m_deviceInfo.extSampleLocations);
+    }
+
     if (m_deviceExtensions.supports(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)) {
       m_deviceInfo.extRobustness2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
       m_deviceInfo.extRobustness2.pNext = std::exchange(m_deviceInfo.core.pNext, &m_deviceInfo.extRobustness2);
@@ -971,6 +981,9 @@ namespace dxvk {
       m_deviceFeatures.extRobustness2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
       m_deviceFeatures.extRobustness2.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.extRobustness2);
     }
+
+    if (m_deviceExtensions.supports(VK_EXT_SAMPLE_LOCATIONS_EXTENSION_NAME))
+      m_deviceFeatures.extSampleLocations = VK_TRUE;
 
     if (m_deviceExtensions.supports(VK_EXT_SHADER_MODULE_IDENTIFIER_EXTENSION_NAME)) {
       m_deviceFeatures.extShaderModuleIdentifier.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT;
@@ -1109,6 +1122,7 @@ namespace dxvk {
       &devExtensions.extNonSeamlessCubeMap,
       &devExtensions.extPageableDeviceLocalMemory,
       &devExtensions.extRobustness2,
+      &devExtensions.extSampleLocations,
       &devExtensions.extShaderModuleIdentifier,
       &devExtensions.extShaderStencilExport,
       &devExtensions.extSwapchainColorSpace,
@@ -1235,6 +1249,9 @@ namespace dxvk {
       enabledFeatures.extRobustness2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
       enabledFeatures.extRobustness2.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.extRobustness2);
     }
+
+    if (devExtensions.extSampleLocations)
+      enabledFeatures.extSampleLocations = VK_TRUE;
 
     if (devExtensions.extShaderModuleIdentifier) {
       enabledFeatures.extShaderModuleIdentifier.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT;
@@ -1427,6 +1444,7 @@ namespace dxvk {
       "\n  extDynamicState3RasterizationSamples   : " << (features.extExtendedDynamicState3.extendedDynamicState3RasterizationSamples ? "1" : "0") <<
       "\n  extDynamicState3SampleMask             : " << (features.extExtendedDynamicState3.extendedDynamicState3SampleMask ? "1" : "0") <<
       "\n  extDynamicState3LineRasterizationMode  : " << (features.extExtendedDynamicState3.extendedDynamicState3LineRasterizationMode ? "1" : "0") <<
+      "\n  extDynamicState3SampleLocationsEnable  : " << (features.extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable ? "1" : "0") <<
       "\n" << VK_EXT_FRAGMENT_SHADER_INTERLOCK_EXTENSION_NAME <<
       "\n  fragmentShaderSampleInterlock          : " << (features.extFragmentShaderInterlock.fragmentShaderSampleInterlock ? "1" : "0") <<
       "\n  fragmentShaderPixelInterlock           : " << (features.extFragmentShaderInterlock.fragmentShaderPixelInterlock ? "1" : "0") <<
@@ -1451,6 +1469,8 @@ namespace dxvk {
       "\n  robustBufferAccess2                    : " << (features.extRobustness2.robustBufferAccess2 ? "1" : "0") <<
       "\n  robustImageAccess2                     : " << (features.extRobustness2.robustImageAccess2 ? "1" : "0") <<
       "\n  nullDescriptor                         : " << (features.extRobustness2.nullDescriptor ? "1" : "0") <<
+      "\n" << VK_EXT_SAMPLE_LOCATIONS_EXTENSION_NAME <<
+      "\n  extension supported                    : " << (features.extSampleLocations ? "1" : "0") <<
       "\n" << VK_EXT_SHADER_MODULE_IDENTIFIER_EXTENSION_NAME <<
       "\n  shaderModuleIdentifier                 : " << (features.extShaderModuleIdentifier.shaderModuleIdentifier ? "1" : "0") <<
       "\n" << VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME <<
