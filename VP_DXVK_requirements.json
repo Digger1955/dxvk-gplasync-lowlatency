@@ -83,6 +83,7 @@
                 "VK_KHR_present_id2": 1,
                 "VK_KHR_present_wait2": 1,
                 "VK_KHR_swapchain_mutable_format": 1,
+                "VK_EXT_extended_dynamic_state3": 1,
                 "VK_EXT_border_color_swizzle": 1,
                 "VK_EXT_extended_dynamic_state3": 1,
                 "VK_EXT_line_rasterization": 1,
@@ -113,6 +114,14 @@
                 },
                 "VkPhysicalDeviceSwapchainMaintenance1FeaturesKHR": {
                     "swapchainMaintenance1": true
+                },
+                "VkPhysicalDeviceExtendedDynamicState3FeaturesEXT": {
+                    "extendedDynamicState3AlphaToCoverageEnable" : true,
+                    "extendedDynamicState3DepthClipEnable" : true,
+                    "extendedDynamicState3RasterizationSamples" : true,
+                    "extendedDynamicState3SampleMask" : true,
+                    "extendedDynamicState3LineRasterizationMode" : true,
+                    "extendedDynamicState3SampleLocationsEnable" : true
                 },
                 "VkPhysicalDeviceBorderColorSwizzleFeaturesEXT": {
                     "borderColorSwizzle": true
@@ -172,7 +181,8 @@
                 "VK_EXT_depth_clip_enable": 1,
                 "VK_EXT_custom_border_color": 1,
                 "VK_EXT_attachment_feedback_loop_layout": 1,
-                "VK_EXT_non_seamless_cube_map": 1
+                "VK_EXT_non_seamless_cube_map": 1,
+                "VK_EXT_sample_locations" : 1
             },
             "features": {
                 "VkPhysicalDeviceFeatures": {

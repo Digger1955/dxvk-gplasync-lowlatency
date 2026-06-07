@@ -456,8 +456,7 @@ namespace dxvk {
   : m_device(device) {
     auto vk = m_device->vkd();
 
-    uint32_t dynamicStateCount = 0;
-    std::array<VkDynamicState, 4> dynamicStates = { };
+    small_vector<VkDynamicState, 8> dynamicStates = { };
 
     bool hasDynamicMultisampleState = state.msInfo.sampleShadingEnable
       && m_device->features().extExtendedDynamicState3.extendedDynamicState3RasterizationSamples
@@ -466,22 +465,30 @@ namespace dxvk {
     bool hasDynamicAlphaToCoverage = hasDynamicMultisampleState && state.cbUseDynamicAlphaToCoverage
       && device->features().extExtendedDynamicState3.extendedDynamicState3AlphaToCoverageEnable;
 
+    bool hasDynamicSampleLocations = m_device->features().extSampleLocations
+      && m_device->features().extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable;
+
     if (hasDynamicMultisampleState) {
-      dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT;
-      dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_SAMPLE_MASK_EXT;
+      dynamicStates.push_back(VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT);
+      dynamicStates.push_back(VK_DYNAMIC_STATE_SAMPLE_MASK_EXT);
     }
 
     if (hasDynamicAlphaToCoverage)
-      dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_ALPHA_TO_COVERAGE_ENABLE_EXT;
+      dynamicStates.push_back(VK_DYNAMIC_STATE_ALPHA_TO_COVERAGE_ENABLE_EXT);
+
+    if (hasDynamicSampleLocations) {
+      dynamicStates.push_back(VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_ENABLE_EXT);
+      dynamicStates.push_back(VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT);
+    }
 
     if (state.cbUseDynamicBlendConstants)
-      dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_BLEND_CONSTANTS;
+      dynamicStates.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
 
     VkPipelineDynamicStateCreateInfo dyInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
 
-    if (dynamicStateCount) {
-      dyInfo.dynamicStateCount  = dynamicStateCount;
-      dyInfo.pDynamicStates     = dynamicStates.data();
+    if (!dynamicStates.empty()) {
+      dyInfo.dynamicStateCount = dynamicStates.size();
+      dyInfo.pDynamicStates = dynamicStates.data();
     }
 
     VkPipelineCreateFlags flags = VK_PIPELINE_CREATE_LIBRARY_BIT_KHR;
@@ -748,6 +755,9 @@ namespace dxvk {
     const DxvkDevice*                     device,
     const DxvkGraphicsPipelineStateInfo&  state,
           DxvkGraphicsPipelineFlags       flags) {
+    bool hasDynamicSampleLocations = device->features().extSampleLocations
+      && device->features().extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable;
+
     dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT;
     dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT;
 
@@ -781,6 +791,11 @@ namespace dxvk {
       dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
       dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_REFERENCE;
       dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+    }
+
+    if (state.useSampleLocations() && hasDynamicSampleLocations) {
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_ENABLE_EXT;
+      dyStates[dyInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT;
     }
 
     if (dyInfo.dynamicStateCount)

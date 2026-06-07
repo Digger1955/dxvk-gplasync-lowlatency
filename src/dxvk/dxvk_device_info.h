@@ -26,6 +26,7 @@ namespace dxvk {
     VkPhysicalDeviceGraphicsPipelineLibraryPropertiesEXT      extGraphicsPipelineLibrary;
     VkPhysicalDeviceLineRasterizationPropertiesEXT            extLineRasterization;
     VkPhysicalDeviceMultiDrawPropertiesEXT                    extMultiDraw;
+    VkPhysicalDeviceSampleLocationsPropertiesEXT              extSampleLocations;
     VkPhysicalDeviceRobustness2PropertiesEXT                  extRobustness2;
     VkPhysicalDeviceTransformFeedbackPropertiesEXT            extTransformFeedback;
     VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT       extVertexAttributeDivisor;
@@ -65,6 +66,7 @@ namespace dxvk {
     VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT             extNonSeamlessCubeMap;
     VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT      extPageableDeviceLocalMemory;
     VkPhysicalDeviceRobustness2FeaturesEXT                    extRobustness2;
+    VkBool32                                                  extSampleLocations;
     VkPhysicalDeviceShaderModuleIdentifierFeaturesEXT         extShaderModuleIdentifier;
     VkBool32                                                  extShaderStencilExport;
     VkBool32                                                  extSwapchainColorSpace;

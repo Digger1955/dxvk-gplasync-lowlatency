@@ -2979,6 +2979,8 @@ namespace dxvk {
     }
 
     if (unlikely(rs.sampleCount() != m_state.gp.state.rs.sampleCount())) {
+      m_flags.set(DxvkContextFlag::GpDirtySampleLocations);
+
       if (!m_state.gp.state.ms.sampleCount())
         m_flags.set(DxvkContextFlag::GpDirtyMultisampleState);
 
@@ -5635,6 +5637,7 @@ namespace dxvk {
         DxvkContextFlag::GpDirtyStencilRef,
         DxvkContextFlag::GpDirtyMultisampleState,
         DxvkContextFlag::GpDirtyRasterizerState,
+        DxvkContextFlag::GpDirtySampleLocations,
         DxvkContextFlag::GpDirtyViewport,
         DxvkContextFlag::GpDirtyDepthBias,
         DxvkContextFlag::GpDirtyDepthBounds,
@@ -6208,6 +6211,7 @@ namespace dxvk {
       DxvkContextFlag::GpDirtyStencilRef,
       DxvkContextFlag::GpDirtyMultisampleState,
       DxvkContextFlag::GpDirtyRasterizerState,
+      DxvkContextFlag::GpDirtySampleLocations,
       DxvkContextFlag::GpDirtyViewport,
       DxvkContextFlag::GpDirtyDepthBias,
       DxvkContextFlag::GpDirtyDepthBounds,
@@ -6268,6 +6272,7 @@ namespace dxvk {
                 DxvkContextFlag::GpDynamicStencilTest,
                 DxvkContextFlag::GpDynamicMultisampleState,
                 DxvkContextFlag::GpDynamicRasterizerState,
+                DxvkContextFlag::GpDynamicSampleLocations,
                 DxvkContextFlag::GpIndependentSets);
     
     m_flags.set(m_state.gp.state.useDynamicBlendConstants()
@@ -6313,7 +6318,11 @@ namespace dxvk {
         m_flags.set(m_state.gp.flags.test(DxvkGraphicsPipelineFlag::HasSampleRateShading)
           ? DxvkContextFlag::GpDynamicMultisampleState
           : DxvkContextFlag::GpDirtyMultisampleState);
-       }
+      }
+
+      if (m_device->features().extSampleLocations
+       && m_device->features().extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable)
+        m_flags.set(DxvkContextFlag::GpDynamicSampleLocations);
     } else {
       if (m_device->features().extExtendedDynamicState3.extendedDynamicState3DepthClipEnable)
         m_flags.set(DxvkContextFlag::GpDirtyDepthClip);
@@ -6322,6 +6331,13 @@ namespace dxvk {
         m_flags.set(m_state.gp.state.useDynamicDepthBounds()
           ? DxvkContextFlag::GpDynamicDepthBounds
           : DxvkContextFlag::GpDirtyDepthBounds);
+      }
+
+      if (m_device->features().extSampleLocations
+       && m_device->features().extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable) {
+        m_flags.set(m_state.gp.state.useSampleLocations()
+          ? DxvkContextFlag::GpDynamicSampleLocations
+          : DxvkContextFlag::GpDirtySampleLocations);
       }
 
       m_flags.set(m_state.gp.state.useDynamicDepthTest()
@@ -7163,6 +7179,40 @@ namespace dxvk {
       if (m_device->features().extExtendedDynamicState3.extendedDynamicState3AlphaToCoverageEnable
        && !m_state.gp.flags.test(DxvkGraphicsPipelineFlag::HasSampleMaskExport))
         m_cmd->cmdSetAlphaToCoverageState(m_state.gp.state.ms.enableAlphaToCoverage());
+
+      if (m_device->features().extSampleLocations
+       && m_device->features().extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable) {
+      }
+    }
+
+    if (unlikely(m_flags.all(DxvkContextFlag::GpDirtySampleLocations,
+                             DxvkContextFlag::GpDynamicSampleLocations))) {
+      m_flags.clr(DxvkContextFlag::GpDirtySampleLocations);
+
+      // While technically undefined behaviour according to the Vulkan spec, we do not track
+      // whether an image has been rendered to using centered or default sample locations.
+      // On AMD hardware, it seems like samples may be reordered depending on their position,
+      // and the interpretation of depth-stencil image contents can change depending on the
+      // sample locations used for rendering said content. We can generally expect games to
+      // render most of its content with regular sample positions and only draw a small portion
+      // with centered positions, so we would want the default interpretation to use default
+      // sample positions anyway, e.g. for the purpose of copies or resolves.
+      VkSampleCountFlagBits msSampleCount = VkSampleCountFlagBits(m_state.gp.state.ms.sampleCount());
+      VkSampleCountFlagBits rsSampleCount = VkSampleCountFlagBits(m_state.gp.state.rs.sampleCount());
+
+      if (!msSampleCount)
+        msSampleCount = rsSampleCount ? rsSampleCount : VK_SAMPLE_COUNT_1_BIT;
+
+      bool center = m_state.gp.state.useSampleLocations();
+      bool enable = true;
+
+      if (m_state.om.renderTargets.depth.view) {
+        auto flags = m_state.om.renderTargets.depth.view->image()->info().flags;
+        enable = bool(flags & VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT);
+      }
+
+      VkSampleLocationsInfoEXT locations = util::setupSampleLocations(msSampleCount, center);
+      m_cmd->cmdSetSampleLocations(enable && center, &locations);
     }
 
     if (unlikely(m_flags.all(DxvkContextFlag::GpDirtyBlendConstants,
@@ -7386,6 +7436,25 @@ namespace dxvk {
                       DxvkContextFlag::GpDirtySpecConstants,
                       DxvkContextFlag::GpDirtyXfbBuffers))
         this->spillRenderPass(true);
+    }
+
+    // If a depth-stencil image is bound used with non-default sample locations,
+    // make sure that the image actually has the compat flag set.
+    if (unlikely(m_state.gp.state.useSampleLocations())) {
+      if (m_state.om.renderTargets.depth.view
+       && m_device->features().extSampleLocations
+       && m_device->features().extExtendedDynamicState3.extendedDynamicState3SampleLocationsEnable) {
+        auto flags = m_state.om.renderTargets.depth.view->image()->info().flags;
+
+        if (!(flags & VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT)) {
+          this->spillRenderPass(true);
+
+          DxvkImageUsageInfo usage = { };
+          usage.flags = VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT;
+
+          ensureImageCompatibility(m_state.om.renderTargets.depth.view->image(), usage);
+        }
+      }
     }
 
     if (m_flags.test(DxvkContextFlag::GpRenderPassSideEffects)
@@ -8240,6 +8309,7 @@ namespace dxvk {
       DxvkContextFlag::GpDirtyStencilRef,
       DxvkContextFlag::GpDirtyMultisampleState,
       DxvkContextFlag::GpDirtyRasterizerState,
+      DxvkContextFlag::GpDirtySampleLocations,
       DxvkContextFlag::GpDirtyViewport,
       DxvkContextFlag::GpDirtyDepthBias,
       DxvkContextFlag::GpDirtyDepthBounds,

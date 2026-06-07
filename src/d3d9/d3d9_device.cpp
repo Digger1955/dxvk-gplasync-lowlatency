@@ -2528,6 +2528,7 @@ namespace dxvk {
         }
         case D3DRS_CULLMODE:
         case D3DRS_FILLMODE:
+        case D3DRS_MULTISAMPLEANTIALIAS:
           m_flags.set(D3D9DeviceFlag::DirtyRasterizerState);
           break;
 
@@ -7238,6 +7239,9 @@ namespace dxvk {
     state.setFrontFace(VK_FRONT_FACE_CLOCKWISE);
     state.setPolygonMode(DecodeFillMode(D3DFILLMODE(rs[D3DRS_FILLMODE])));
     state.setFlatShading(m_state.renderStates[D3DRS_SHADEMODE] == D3DSHADE_FLAT);
+    state.setSampleCount(m_state.renderStates[D3DRS_MULTISAMPLEANTIALIAS]
+      ? VkSampleCountFlags(0u)
+      : VkSampleCountFlags(VK_SAMPLE_COUNT_1_BIT));
 
     EmitCs([
       cState  = state
