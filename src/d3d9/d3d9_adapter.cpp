@@ -132,7 +132,9 @@ namespace dxvk {
     if (ds && !IsDepthStencilFormat(CheckFormat))
       return D3DERR_NOTAVAILABLE;
 
-    if (unlikely(rt && CheckFormat == D3D9Format::A8 && m_parent->GetOptions().disableA8RT))
+    auto& options = m_parent->GetOptions();
+
+    if (unlikely(rt && CheckFormat == D3D9Format::A8 && options.disableA8RT))
       return D3DERR_NOTAVAILABLE;
 
     // NULL RT format hack (supported across all
@@ -203,7 +205,8 @@ namespace dxvk {
     if (mapping.FormatSrgb  == VK_FORMAT_UNDEFINED && srgb)
       return D3DERR_NOTAVAILABLE;
 
-    if (RType == D3DRTYPE_CUBETEXTURE && mapping.Aspect != VK_IMAGE_ASPECT_COLOR_BIT)
+    if (RType == D3DRTYPE_CUBETEXTURE && mapping.Aspect != VK_IMAGE_ASPECT_COLOR_BIT
+     && !options.supportCubeDepthFormats)
       return D3DERR_NOTAVAILABLE;
 
     // Let's actually ask Vulkan now that we got some quirks out the way!
@@ -211,6 +214,7 @@ namespace dxvk {
     if (unlikely(mapping.ConversionFormatInfo.FormatColor != VK_FORMAT_UNDEFINED)) {
       format = mapping.ConversionFormatInfo.FormatColor;
     }
+
     return CheckDeviceVkFormat(format, Usage, RType);
   }
 
