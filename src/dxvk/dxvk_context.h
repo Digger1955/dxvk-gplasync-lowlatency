@@ -1711,6 +1711,10 @@ namespace dxvk {
     bool updateGraphicsPipeline();
     bool updateGraphicsPipelineState();
 
+    // Bind-skip: tracks the last successfully bound pipeline handle.
+    // Invalidated at every command-list, spill, flush, and unbind boundary.
+    VkPipeline m_lastBoundGraphicsPipeline = VK_NULL_HANDLE;
+
     uint32_t getGraphicsPipelineDebugColor() const;
 
     template<VkPipelineBindPoint BindPoint>

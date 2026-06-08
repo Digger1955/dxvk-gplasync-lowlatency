@@ -33,6 +33,8 @@ namespace dxvk {
 
     auto budget = config.getOption<int32_t>("dxvk.maxMemoryBudget", 0);
     maxMemoryBudget = VkDeviceSize(std::max(budget, 0)) << 20u;
+
+    enableBindSkip = config.getOption<bool>("dxvk.enableBindSkip", true);
   }
 
 } 

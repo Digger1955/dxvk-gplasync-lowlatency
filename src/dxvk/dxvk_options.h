@@ -14,6 +14,11 @@ namespace dxvk {
     /// Enable debug utils
     bool enableDebugUtils = false;
 
+    /// Skip redundant vkCmdBindPipeline calls when the resolved pipeline
+    /// handle is unchanged since the last bind and no pipeline state is
+    /// dirty. Reduces CPU overhead. Opt-out: dxvk.enableBindSkip = False
+    bool enableBindSkip = true;
+
     /// Enable state cache
     bool enableStateCache = true;
 
