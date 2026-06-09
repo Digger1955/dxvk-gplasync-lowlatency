@@ -964,7 +964,7 @@ namespace dxvk {
      * in mod New Vegas Reloaded. Nvidia path in  *
      * same mod use NvAPI_D3D9_StretchRectEx for  *
      * depth buffer resolves                      */
-    { R"(\\FalloutNV(Launcher)?\.exe$)", {{
+    { R"(\\Fallout( -)? New Vegas.*\\(FalloutNV)?(Launcher)?\.exe$)", {{
       { "d3d9.floatEmulation",            "Strict" },
       { "d3d9.hideNvidiaGpu",               "True" },
     }} },
@@ -1182,6 +1182,12 @@ namespace dxvk {
        Writes to buffer after unlocking it. */
     { R"(\\insurgency\.exe$)", {{
       { "d3d9.forceDrawTimeBufferUpload",   "True" },
+    }} },
+    /* SimCity Societies: Destinations            *
+     * Needs depth format cube texture support    *
+     * in order to start up properly              */
+    { R"(\\SCSDestinations\.exe$)", {{
+      { "d3d9.supportCubeDepthFormats",     "True" },
     }} },
 
     /**********************************************/

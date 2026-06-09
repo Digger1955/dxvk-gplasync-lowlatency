@@ -134,8 +134,7 @@ The `DXVK_HUD` environment variable controls a HUD which can display the framera
 - `cs`: Shows worker thread statistics.
 - `compiler`: Shows shader compiler activity
 - `samplers`: Shows the current number of sampler pairs used *[D3D9 Only]*
-- `ffshaders`: Shows the current number of shaders generated from fixed function state *[D3D9 Only]*
-- `swvp`: Shows whether or not the device is running in software vertex processing mode *[D3D9 Only]*
+- `swvp`: Shows the vertex processing mode and the current number of software vertex processing shaders *[D3D9 Only]*
 - `scale=x`: Scales the HUD by a factor of `x` (e.g. `1.5`)
 - `opacity=y`: Adjusts the HUD opacity by a factor of `y` (e.g. `0.5`, `1.0` being fully opaque).
 - `renderlatency`: Shows average render latency over 100 frames. Measurements are taken from the start of frame (usually when the game starts processing input) until the GPU did finish rendering this frame. This will not work when a game's fps limiter is enabled, as there is no way to detect when a game will stall processing before reading input. 
