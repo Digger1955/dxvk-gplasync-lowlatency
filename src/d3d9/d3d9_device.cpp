@@ -8111,7 +8111,15 @@ namespace dxvk {
       key.Data.Contents.EmissiveSource   = m_state.renderStates[D3DRS_EMISSIVEMATERIALSOURCE] & mask;
 
       uint32_t lightCount = 0;
-      key.Data.Contents.LightCount       = key.Data.Contents.UseLighting ? lightCount : 0;
+
+      if (key.Data.Contents.UseLighting) {
+        for (uint32_t i = 0; i < caps::MaxEnabledLights; i++) {
+          if (m_state.enabledLightIndices[i] != std::numeric_limits<uint32_t>::max())
+            lightCount++;
+        }
+      }
+
+      key.Data.Contents.LightCount = lightCount;
 
       for (uint32_t i = 0; i < caps::MaxTextureBlendStages; i++) {
         uint32_t transformFlags = m_state.textureStages[i][DXVK_TSS_TEXTURETRANSFORMFLAGS] & ~(D3DTTFF_PROJECTED);
