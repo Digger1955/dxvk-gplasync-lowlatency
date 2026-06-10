@@ -7813,7 +7813,7 @@ namespace dxvk {
           ? GetCommonShader(cVertexShader)->GetIsgn()
           : GetFixedFunctionIsgn();
 
-        uint32_t attrCount = isgn.size();
+        uint32_t attrCount = isgn.elemCount;
 
         for (uint32_t i = 0; i < attrCount; i++) {
           const auto& decl = isgn.elems[i];
