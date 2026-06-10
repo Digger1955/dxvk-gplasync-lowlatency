@@ -8102,6 +8102,7 @@ namespace dxvk {
       key.Data.Contents.SpecularSource   = m_state.renderStates[D3DRS_SPECULARMATERIALSOURCE] & mask;
       key.Data.Contents.EmissiveSource   = m_state.renderStates[D3DRS_EMISSIVEMATERIALSOURCE] & mask;
 
+      uint32_t lightCount = 0;
       key.Data.Contents.LightCount       = key.Data.Contents.UseLighting ? lightCount : 0;
 
       for (uint32_t i = 0; i < caps::MaxTextureBlendStages; i++) {
