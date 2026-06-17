@@ -3567,16 +3567,7 @@ namespace dxvk {
       m_flags.set(D3D9DeviceFlag::DirtyFFVertexShader);
 
       BindShader<DxsoProgramTypes::VertexShader>(GetCommonShader(shader));
-      m_vsShaderMasks = newShader->GetShaderMask();
-
-      UpdateTextureTypeMismatchesForShader(newShader, m_vsShaderMasks.samplerMask, FirstVSSamplerSlot);
-    }
-    else {
-      m_vsShaderMasks = D3D9ShaderMasks();
-
-      // Fixed function vertex shaders don't support sampling textures.
-      m_dirtyTextures |= m_vsShaderMasks.samplerMask & m_mismatchingTextureTypes;
-      m_mismatchingTextureTypes &= ~m_vsShaderMasks.samplerMask;
+      UpdateTextureTypeMismatchesForShader(newShader, VSShaderMasks().samplerMask, FirstVSSamplerSlot);
     }
 
     m_flags.set(D3D9DeviceFlag::DirtyInputLayout);
@@ -3943,24 +3934,20 @@ namespace dxvk {
         || newShader->GetMeta().maxConstIndexB > oldShader->GetMeta().maxConstIndexB;
     }
 
+    const D3D9ShaderMasks oldShaderMasks = PSShaderMasks();
     m_state.pixelShader = shader;
-
-    D3D9ShaderMasks newShaderMasks;
+    const D3D9ShaderMasks newShaderMasks = PSShaderMasks();
 
     if (shader != nullptr) {
       m_flags.set(D3D9DeviceFlag::DirtyFFPixelShader);
 
       BindShader<DxsoProgramTypes::PixelShader>(newShader);
-      newShaderMasks = newShader->GetShaderMask();
 
       UpdateTextureTypeMismatchesForShader(newShader, newShaderMasks.samplerMask, 0);
     }
     else {
       // TODO: What fixed function textures are in use?
       // Currently we are making all 8 of them as in use here.
-
-      // The RT output is always 0 for fixed function.
-      newShaderMasks = FixedFunctionMask;
 
       // Fixed function always uses spec constants to decide the texture type.
       m_dirtyTextures |= newShaderMasks.samplerMask & m_mismatchingTextureTypes;
@@ -3977,14 +3964,13 @@ namespace dxvk {
       anyColorWriteMask |= (m_state.renderStates[ColorWriteIndex(i)] != 0) << i;
     }
 
-    uint32_t oldUseMask = boundMask & anyColorWriteMask & m_psShaderMasks.rtMask;
+    uint32_t oldUseMask = boundMask & anyColorWriteMask & oldShaderMasks.rtMask;
     uint32_t newUseMask = boundMask & anyColorWriteMask & newShaderMasks.rtMask;
     if (oldUseMask != newUseMask)
       m_flags.set(D3D9DeviceFlag::DirtyFramebuffer);
 
-    if (m_psShaderMasks.samplerMask != newShaderMasks.samplerMask ||
-        m_psShaderMasks.rtMask != newShaderMasks.rtMask) {
-      m_psShaderMasks = newShaderMasks;
+    if (oldShaderMasks.samplerMask != newShaderMasks.samplerMask ||
+        oldShaderMasks.rtMask != newShaderMasks.rtMask) {
       UpdateActiveHazardsRT(std::numeric_limits<uint32_t>::max());
       UpdateActiveHazardsDS(std::numeric_limits<uint32_t>::max());
     }
@@ -4628,24 +4614,17 @@ namespace dxvk {
     // a valid resource or vice versa.
     const bool isPSSampler = StateSampler < caps::MaxTexturesPS;
     if (isPSSampler) {
-      const uint32_t textureType = newTexture != nullptr
-        ? uint32_t(newTexture->GetType() - D3DRTYPE_TEXTURE)
-        : 0;
-      // There are 3 texture types, so we need 2 bits.
-      const uint32_t offset = StateSampler * 2;
-      const uint32_t textureBitMask = 0b11u       << offset;
-      const uint32_t textureBits    = textureType << offset;
-
-      // In fixed function shaders and SM < 2 we put the type mask
-      // into a spec constant to select the used sampler type.
-      m_textureTypes &= ~textureBitMask;
-      m_textureTypes |=  textureBits;
-
       // If we either bind a new texture or unbind the old one,
       // we need to update the fixed function shader
       // because we generate a different shader based on whether each texture is bound.
       if (newTexture == nullptr || oldTexture == nullptr)
         m_flags.set(D3D9DeviceFlag::DirtyFFPixelShader);
+    }
+
+    bool oldTextureIsCube = oldTexture != nullptr ? oldTexture->IsCube() : false;
+    bool newTextureIsCube = newTexture != nullptr ? newTexture->IsCube() : false;
+    if (unlikely(oldTextureIsCube != newTextureIsCube)) {
+      m_dirtySamplerStates |= 1u << StateSampler;
     }
 
     DWORD oldUsage = oldTexture != nullptr ? oldTexture->Desc()->Usage : 0;
@@ -6470,7 +6449,27 @@ namespace dxvk {
     m_mismatchingTextureTypes &= ~bit;
 
     auto tex = GetCommonTexture(m_state.textures[index]);
-    if (tex != nullptr) {
+
+    if (likely(IsPSSampler(index))) {
+      const uint32_t textureType = tex != nullptr
+        ? uint32_t(tex->GetType() - D3DRTYPE_TEXTURE)
+        : 0;
+      // There are 3 texture types, so we need 2 bits.
+      const uint32_t offset = index * 2;
+      const uint32_t textureBitMask = 0b11u       << offset;
+      const uint32_t textureBits    = textureType << offset;
+
+      // In fixed function shaders and SM < 2 we put the type mask
+      // into a spec constant to select the used sampler type.
+      uint32_t oldTextureTypes = m_textureTypes;
+      if (oldTextureTypes != m_textureTypes) {
+        m_flags.set(D3D9DeviceFlag::DirtyFFPixelShader);
+      }
+      m_textureTypes &= ~textureBitMask;
+      m_textureTypes |=  textureBits;
+    }
+
+    if (likely(tex != nullptr)) {
       m_activeTextures |= bit;
 
       if (unlikely(tex->IsRenderTarget()))
@@ -6498,14 +6497,6 @@ namespace dxvk {
       m_drefClamp &= ~bit;
       m_drefClamp |= uint32_t(tex->IsUpgradedToD32f()) << index;
 
-      // Update non-seamless cubemap mask
-      const bool oldCube = m_cubeTextures & bit;
-      const bool newCube = tex->GetType() == D3DRTYPE_CUBETEXTURE;
-      if (oldCube != newCube) {
-        m_cubeTextures ^= bit;
-        m_dirtySamplerStates |= bit;
-      }
-
       if (unlikely(m_fetch4Enabled & bit))
         UpdateActiveFetch4(index);
 
@@ -6524,7 +6515,7 @@ namespace dxvk {
 
 
   inline void D3D9DeviceEx::UpdateActiveHazardsRT(uint32_t texMask) {
-    auto masks = m_psShaderMasks;
+    auto masks = PSShaderMasks();
     masks.rtMask      &= m_activeRTsWhichAreTextures;
     masks.samplerMask &= m_activeTextureRTs & texMask;
 
@@ -6551,7 +6542,7 @@ namespace dxvk {
 
 
   inline void D3D9DeviceEx::UpdateActiveHazardsDS(uint32_t texMask) {
-    auto masks = m_psShaderMasks;
+    auto masks = PSShaderMasks();
     masks.samplerMask &= m_activeTextureDSs & texMask;
 
     m_activeHazardsDS = m_activeHazardsDS & (~texMask);
@@ -6906,6 +6897,8 @@ namespace dxvk {
     // break up the current render pass. So we dont unbind for disabled color write masks
     // if the RT has the same size or is bigger than the smallest active RT.
 
+    const D3D9ShaderMasks psShaderMasks = PSShaderMasks();
+
     uint32_t boundMask = 0u;
     uint32_t anyColorWriteMask = 0u;
     uint32_t limitsRenderAreaMask = 0u;
@@ -6923,7 +6916,7 @@ namespace dxvk {
         continue;
 
       // Dont bind it if the pixel shader doesnt write to it
-      if (!(m_psShaderMasks.rtMask & (1 << i)))
+      if (!(psShaderMasks.rtMask & (1 << i)))
         continue;
 
       boundMask |= 1 << i;
@@ -7369,10 +7362,12 @@ namespace dxvk {
 
     m_samplerBindCount++;
 
+    const D3D9CommonTexture* tex = GetCommonTexture(m_state.textures[Sampler]);
+
     EmitCs([this,
       cSlot     = slot,
       cState    = D3D9SamplerInfo(m_state.samplerStates[Sampler]),
-      cIsCube   = bool(m_cubeTextures & (1u << Sampler)),
+      cIsCube   = tex && tex->IsCube(),
       cIsDepth  = bool(m_depthTextures & (1u << Sampler)),
       cBindId   = m_samplerBindCount
     ] (DxvkContext* ctx) {
@@ -7545,7 +7540,7 @@ namespace dxvk {
       m_activeVertexBuffersToUpload &= ~buffersToUpload;
     }
 
-    const uint32_t usedSamplerMask = m_psShaderMasks.samplerMask | m_vsShaderMasks.samplerMask;
+    const uint32_t usedSamplerMask = PSShaderMasks().samplerMask | VSShaderMasks().samplerMask;
     const uint32_t usedTextureMask = m_activeTextures & usedSamplerMask;
 
     const uint32_t texturesToUpload = m_activeTexturesToUpload & usedTextureMask;
@@ -8255,9 +8250,8 @@ namespace dxvk {
 
   void D3D9DeviceEx::UpdateFixedFunctionPS() {
     // Shader...
-    if (m_flags.test(D3D9DeviceFlag::DirtyFFPixelShader) || m_lastSamplerTypesFF != m_textureTypes) {
+    if (m_flags.test(D3D9DeviceFlag::DirtyFFPixelShader)) {
       m_flags.clr(D3D9DeviceFlag::DirtyFFPixelShader);
-      m_lastSamplerTypesFF = m_textureTypes;
 
       // Used args for a given operation.
       auto ArgsMask = [](DWORD Op) {
@@ -8717,7 +8711,6 @@ namespace dxvk {
 
     m_dirtyTextures = 0;
     m_depthTextures = 0;
-    m_cubeTextures = 0;
 
     auto& ss = m_state.samplerStates.get();
     for (uint32_t i = 0; i < ss.size(); i++) {
