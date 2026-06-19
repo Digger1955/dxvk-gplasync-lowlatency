@@ -128,6 +128,14 @@ namespace dxvk {
     }
 
     /**
+     * \brief Queries shader binding layout
+     * \returns Pipeline layout builder
+     */
+    DxvkPipelineLayoutBuilder getLayout() const {
+      return m_layout;
+    }
+
+    /**
      * \brief Retrieves spec constant mask
      * \returns Bit mask of used spec constants
      */
@@ -169,12 +177,12 @@ namespace dxvk {
      *
      * Rewrites binding IDs and potentially fixes up other
      * parts of the code depending on pipeline state.
-     * \param [in] layout Biding layout
+     * \param [in] bindings Biding map
      * \param [in] state Pipeline state info
      * \returns Uncompressed SPIR-V code buffer
      */
     SpirvCodeBuffer getCode(
-      const DxvkBindingLayoutObjects*   layout,
+      const DxvkShaderBindingMap*       bindings,
       const DxvkShaderModuleCreateInfo& state) const;
     
     /**
@@ -249,9 +257,10 @@ namespace dxvk {
   private:
 
     struct BindingOffsets {
-      uint32_t bindingId;
-      uint32_t bindingOffset;
-      uint32_t setOffset;
+      uint32_t bindingIndex = 0u;
+      uint32_t bindingOffset = 0u;
+      uint32_t setIndex = 0u;
+      uint32_t setOffset = 0u;
     };
 
     DxvkShaderCreateInfo          m_info;
@@ -270,6 +279,8 @@ namespace dxvk {
     std::vector<BindingOffsets>   m_bindingOffsets;
 
     DxvkBindingLayout             m_bindings;
+
+    DxvkPipelineLayoutBuilder     m_layout;
 
     static void eliminateInput(
             SpirvCodeBuffer&          code,
@@ -428,6 +439,12 @@ namespace dxvk {
     DxvkBindingLayout getBindings() const;
 
     /**
+     * \brief Builds merged binding layout
+     * \returns Pipeline layout builder
+     */
+    DxvkPipelineLayoutBuilder getLayout() const;
+
+    /**
      * \brief Adds a shader to the key
      *
      * Shaders must be added in stage order.
@@ -543,7 +560,9 @@ namespace dxvk {
     const DxvkDevice*               m_device;
           DxvkPipelineStats*        m_stats;
           DxvkShaderSet             m_shaders;
-    const DxvkBindingLayoutObjects* m_layout;
+    const DxvkBindingLayoutObjects* m_bindings;
+
+    DxvkPipelineBindings            m_layout;
 
     dxvk::mutex                     m_mutex;
     DxvkShaderPipelineLibraryHandle m_pipeline      = { VK_NULL_HANDLE, 0 };
