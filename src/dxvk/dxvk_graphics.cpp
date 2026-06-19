@@ -1014,6 +1014,7 @@ namespace dxvk {
     m_stats         (&pipeMgr->m_stats),
     m_shaders       (std::move(shaders)),
     m_bindings      (layout),
+    m_layout        (pipeMgr, buildPipelineLayout()),
     m_barrier       (layout->getGlobalBarrier()),
     m_vsLibrary     (vsLibrary),
     m_fsLibrary     (fsLibrary),
@@ -1379,7 +1380,7 @@ namespace dxvk {
 
     VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &libInfo };
     info.flags              = vs.linkFlags | fs.linkFlags;
-    info.layout             = m_bindings->getPipelineLayout(true);
+    info.layout             = m_layout.getLayout()->getPipelineLayout(true);
     info.basePipelineIndex  = -1;
 
     VkPipeline pipeline = VK_NULL_HANDLE;
@@ -1460,7 +1461,7 @@ namespace dxvk {
     info.pDepthStencilState       = &key.fsState.dsInfo;
     info.pColorBlendState         = &key.foState.cbInfo;
     info.pDynamicState            = &key.dyState.dyInfo;
-    info.layout                   = m_bindings->getPipelineLayout(false);
+    info.layout                   = m_layout.getLayout()->getPipelineLayout(false);
     info.basePipelineIndex        = -1;
     
     if (!key.prState.tsInfo.patchControlPoints)
@@ -1514,7 +1515,7 @@ namespace dxvk {
   SpirvCodeBuffer DxvkGraphicsPipeline::getShaderCode(
     const Rc<DxvkShader>&                shader,
     const DxvkShaderModuleCreateInfo&    info) const {
-    return shader->getCode(m_bindings, info);
+    return shader->getCode(&m_bindings->map(), info);
   }
 
 
@@ -1651,8 +1652,21 @@ namespace dxvk {
 
     return true;
   }
-  
-  
+
+
+  DxvkPipelineLayoutBuilder DxvkGraphicsPipeline::buildPipelineLayout() const {
+    DxvkPipelineLayoutBuilder builder(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    if (m_shaders.vs)  builder.addLayout(m_shaders.vs->getLayout());
+    if (m_shaders.tcs) builder.addLayout(m_shaders.tcs->getLayout());
+    if (m_shaders.tes) builder.addLayout(m_shaders.tes->getLayout());
+    if (m_shaders.gs)  builder.addLayout(m_shaders.gs->getLayout());
+    if (m_shaders.fs)  builder.addLayout(m_shaders.fs->getLayout());
+
+    return builder;
+  }
+
+
   void DxvkGraphicsPipeline::writePipelineStateToCache(
     const DxvkGraphicsPipelineStateInfo& state,
     const DxvkDepthStencilState&         dynDs) const {
@@ -1841,5 +1855,5 @@ namespace dxvk {
 
     return name.str();
   }
-  
+
 }

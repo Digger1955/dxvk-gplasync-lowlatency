@@ -46,7 +46,7 @@ namespace dxvk {
   DxvkShader::DxvkShader(
     const DxvkShaderCreateInfo&   info,
           SpirvCodeBuffer&&       spirv)
-  : m_info(info), m_code(spirv), m_bindings(info.stage) {
+  : m_info(info), m_code(spirv), m_bindings(info.stage), m_layout(info.stage) {
     m_info.bindings = nullptr;
 
     // Copy resource binding slot infos
@@ -54,6 +54,9 @@ namespace dxvk {
       DxvkBindingInfo binding = info.bindings[i];
       binding.stage = info.stage;
       m_bindings.addBinding(binding);
+
+      DxvkShaderDescriptor descriptor(binding);
+      m_layout.addBindings(1, &descriptor);
     }
 
     if (info.pushConstSize) {
@@ -63,6 +66,9 @@ namespace dxvk {
       pushConst.size = info.pushConstSize;
 
       m_bindings.addPushConstantRange(pushConst);
+
+      m_layout.addPushConstants(DxvkPushConstantRange(
+        info.pushConstStages, info.pushConstSize));
     }
 
     // Run an analysis pass over the SPIR-V code to gather some
@@ -81,9 +87,16 @@ namespace dxvk {
         if (ins.arg(2) == spv::DecorationBinding) {
           uint32_t varId = ins.arg(1);
           bindingOffsets.resize(std::max(bindingOffsets.size(), size_t(varId + 1)));
-          bindingOffsets[varId].bindingId = ins.arg(3);
+          bindingOffsets[varId].bindingIndex = ins.arg(3);
           bindingOffsets[varId].bindingOffset = ins.offset() + 3;
           varIds.push_back(varId);
+        }
+
+        if (ins.arg(2) == spv::DecorationDescriptorSet) {
+          uint32_t varId = ins.arg(1);
+          bindingOffsets.resize(std::max(bindingOffsets.size(), size_t(varId + 1)));
+          bindingOffsets[varId].setIndex = ins.arg(3);
+          bindingOffsets[varId].setOffset = ins.offset() + 3;
         }
 
         if (ins.arg(2) == spv::DecorationBuiltIn) {
@@ -91,12 +104,6 @@ namespace dxvk {
             sampleMaskIds.push_back(ins.arg(1));
           if (ins.arg(3) == spv::BuiltInPosition)
             m_flags.set(DxvkShaderFlag::ExportsPosition);
-        }
-
-        if (ins.arg(2) == spv::DecorationDescriptorSet) {
-          uint32_t varId = ins.arg(1);
-          bindingOffsets.resize(std::max(bindingOffsets.size(), size_t(varId + 1)));
-          bindingOffsets[varId].setOffset = ins.offset() + 3;
         }
 
         if (ins.arg(2) == spv::DecorationSpecId) {
@@ -186,20 +193,23 @@ namespace dxvk {
   
   
   SpirvCodeBuffer DxvkShader::getCode(
-    const DxvkBindingLayoutObjects*   layout,
+    const DxvkShaderBindingMap*       bindings,
     const DxvkShaderModuleCreateInfo& state) const {
     SpirvCodeBuffer spirvCode = m_code.decompress();
     uint32_t* code = spirvCode.data();
     
     // Remap resource binding IDs
-    for (const auto& info : m_bindingOffsets) {
-      auto mappedBinding = layout->lookupBinding(m_info.stage, info.bindingId);
+    if (bindings) {
+      for (const auto& info : m_bindingOffsets) {
+        auto mappedBinding = bindings->find(DxvkShaderBinding(
+          m_info.stage, info.setIndex, info.bindingIndex));
 
-      if (mappedBinding) {
-        code[info.bindingOffset] = mappedBinding->binding;
+        if (mappedBinding) {
+          code[info.bindingOffset] = mappedBinding->getBinding();
 
-        if (info.setOffset)
-          code[info.setOffset] = mappedBinding->set;
+          if (info.setOffset)
+            code[info.setOffset] = mappedBinding->getSet();
+        }
       }
     }
 
@@ -1258,6 +1268,22 @@ namespace dxvk {
   }
 
 
+  DxvkPipelineLayoutBuilder DxvkShaderPipelineLibraryKey::getLayout() const {
+    // If no shader is defined, this is a null fragment shader library
+    VkShaderStageFlags stages = m_shaderStages;
+
+    if (!stages)
+      stages = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    DxvkPipelineLayoutBuilder result(stages);
+
+    for (uint32_t i = 0u; i < m_shaderCount; i++)
+      result.addLayout(m_shaders[i]->getLayout());
+
+    return result;
+  }
+
+
   void DxvkShaderPipelineLibraryKey::addShader(
     const Rc<DxvkShader>&               shader) {
     m_shaderStages |= shader->info().stage;
@@ -1317,7 +1343,8 @@ namespace dxvk {
   : m_device      (device),
     m_stats       (&manager->m_stats),
     m_shaders     (key.getShaderSet()),
-    m_layout      (layout) {
+    m_bindings    (layout),
+    m_layout      (manager, key.getLayout()) {
 
   }
 
@@ -1547,7 +1574,7 @@ namespace dxvk {
     info.pViewportState       = &vpInfo;
     info.pRasterizationState  = &rsInfo;
     info.pDynamicState        = &dyInfo;
-    info.layout               = m_layout->getPipelineLayout(true);
+    info.layout               = m_layout.getLayout()->getPipelineLayout(true);
     info.basePipelineIndex    = -1;
 
     VkPipeline pipeline = VK_NULL_HANDLE;
@@ -1639,7 +1666,7 @@ namespace dxvk {
     info.pStages              = stageInfo.getStageInfos();
     info.pDepthStencilState   = &dsInfo;
     info.pDynamicState        = &dyInfo;
-    info.layout               = m_layout->getPipelineLayout(true);
+    info.layout               = m_layout.getLayout()->getPipelineLayout(true);
     info.basePipelineIndex    = -1;
 
     if (hasSampleRateShading)
@@ -1664,7 +1691,7 @@ namespace dxvk {
     VkComputePipelineCreateInfo info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
     info.flags        = flags;
     info.stage        = *stageInfo.getStageInfos();
-    info.layout       = m_layout->getPipelineLayout(false);
+    info.layout       = m_layout.getLayout()->getPipelineLayout(false);
     info.basePipelineIndex = -1;
 
     VkPipeline pipeline = VK_NULL_HANDLE;
@@ -1687,7 +1714,7 @@ namespace dxvk {
     if (!shader)
       return SpirvCodeBuffer(dxvk_dummy_frag);
 
-    return shader->getCode(m_layout, DxvkShaderModuleCreateInfo());
+    return shader->getCode(&m_bindings->map(), DxvkShaderModuleCreateInfo());
   }
 
 

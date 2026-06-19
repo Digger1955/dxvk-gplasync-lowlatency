@@ -529,7 +529,7 @@ namespace dxvk {
     
     /**
      * \brief Pipeline layout
-     * 
+     *
      * Stores the pipeline layout and the descriptor set
      * layout, as well as information on the resource
      * slots used by the pipeline.
@@ -537,6 +537,14 @@ namespace dxvk {
      */
     DxvkBindingLayoutObjects* getBindings() const {
       return m_bindings;
+    }
+
+    /**
+     * \brief Queries pipeline layout
+     * \returns Pipeline layout
+     */
+    const DxvkPipelineBindings* getLayout() const {
+      return &m_layout;
     }
 
     /**
@@ -626,6 +634,7 @@ namespace dxvk {
 
     DxvkGraphicsPipelineShaders m_shaders;
     DxvkBindingLayoutObjects*   m_bindings;
+    DxvkPipelineBindings        m_layout;
     DxvkGlobalPipelineBarrier   m_barrier;
     DxvkGraphicsPipelineFlags   m_flags;
 
@@ -705,11 +714,13 @@ namespace dxvk {
     bool validatePipelineState(
       const DxvkGraphicsPipelineStateInfo& state,
             bool                           trusted) const;
-    
+
+    DxvkPipelineLayoutBuilder buildPipelineLayout() const;
+
     void writePipelineStateToCache(
       const DxvkGraphicsPipelineStateInfo& state,
       const DxvkDepthStencilState&         dynDs) const;
-    
+
     void logPipelineState(
             LogLevel                       level,
       const DxvkGraphicsPipelineStateInfo& state) const;
@@ -717,5 +728,5 @@ namespace dxvk {
     std::string createDebugName() const;
 
   };
-  
+
 }

@@ -72,7 +72,7 @@ namespace dxvk {
     const DxvkComputePipelineShaders& shaders() const {
       return m_shaders;
     }
-    
+
     /**
      * \brief Pipeline layout
      * 
@@ -83,6 +83,14 @@ namespace dxvk {
      */
     DxvkBindingLayoutObjects* getBindings() const {
       return m_bindings;
+    }
+
+    /**
+     * \brief Queries pipeline layout
+     * \returns Pipeline layout
+     */
+    const DxvkPipelineBindings* getLayout() const {
+      return &m_layout;
     }
 
     /**
@@ -136,7 +144,9 @@ namespace dxvk {
 
     DxvkComputePipelineShaders  m_shaders;
     DxvkBindingLayoutObjects*   m_bindings;
-    
+
+    DxvkPipelineBindings        m_layout;
+
     std::string                 m_debugName;
 
     alignas(CACHE_LINE_SIZE)
