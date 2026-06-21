@@ -33,10 +33,7 @@ namespace dxvk::hud {
 
   HudRenderer::HudRenderer(const Rc<DxvkDevice>& device)
   : m_device              (device),
-    m_textSetLayout       (createSetLayout()),
     m_textPipelineLayout  (createPipelineLayout()) {
-    createShaderModule(m_textVs, VK_SHADER_STAGE_VERTEX_BIT, sizeof(hud_text_vert), hud_text_vert);
-    createShaderModule(m_textFs, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(hud_text_frag), hud_text_frag);
   }
   
   
@@ -45,15 +42,8 @@ namespace dxvk::hud {
 
     for (const auto& p : m_textPipelines)
       vk->vkDestroyPipeline(vk->device(), p.second, nullptr);
-
-    vk->vkDestroyShaderModule(vk->device(), m_textVs.stageInfo.module, nullptr);
-    vk->vkDestroyShaderModule(vk->device(), m_textFs.stageInfo.module, nullptr);
-
-    vk->vkDestroyPipelineLayout(vk->device(), m_textPipelineLayout, nullptr);
-    vk->vkDestroyDescriptorSetLayout(vk->device(), m_textSetLayout, nullptr);
   }
-  
-  
+
   void HudRenderer::beginFrame(
     const DxvkContextObjects& ctx,
     const Rc<DxvkImageView>&  dstView,
@@ -227,7 +217,7 @@ namespace dxvk::hud {
       VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     // Bind resources
-    VkDescriptorSet set = ctx.descriptorPool->alloc(m_textSetLayout);
+    VkDescriptorSet set = ctx.descriptorPool->alloc(m_textPipelineLayout->getDescriptorSetLayout(0));
 
     VkDescriptorBufferInfo fontBufferDescriptor = m_fontBuffer->getDescriptor(0, m_fontBuffer->info().size).buffer;
 
@@ -251,11 +241,13 @@ namespace dxvk::hud {
       descriptorWrites.size(),
       descriptorWrites.data());
 
-    ctx.cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipelineLayout,
-      set, 0, nullptr);
+    VkPipelineLayout pipelineLayout = m_textPipelineLayout->getPipelineLayout(false);
 
-    ctx.cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer, m_textPipelineLayout,
+    ctx.cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      pipelineLayout, set, 0, nullptr);
+
+    ctx.cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer, pipelineLayout,
       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
       0, sizeof(m_pushConstants), &m_pushConstants);
 
@@ -296,33 +288,6 @@ namespace dxvk::hud {
     specInfo.dataSize = sizeof(*constants);
     specInfo.pData = constants;
     return specInfo;
-  }
-
-
-  void HudRenderer::createShaderModule(
-          HudShaderModule&    shader,
-          VkShaderStageFlagBits stage,
-          size_t              size,
-    const uint32_t*           code) const {
-    shader.moduleInfo.codeSize = size;
-    shader.moduleInfo.pCode = code;
-
-    shader.stageInfo.stage = stage;
-    shader.stageInfo.pName = "main";
-
-    if (m_device->features().khrMaintenance5.maintenance5
-     || m_device->features().extGraphicsPipelineLibrary.graphicsPipelineLibrary) {
-      shader.stageInfo.pNext = &shader.moduleInfo;
-      return;
-    }
-
-    auto vk = m_device->vkd();
-
-    VkResult vr = vk->vkCreateShaderModule(vk->device(),
-      &shader.moduleInfo, nullptr, &shader.stageInfo.module);
-
-    if (vr != VK_SUCCESS)
-      throw DxvkError(str::format("Failed to create swap chain blit shader module: ", vr));
   }
 
 
@@ -501,51 +466,17 @@ namespace dxvk::hud {
   }
 
 
-  VkDescriptorSetLayout HudRenderer::createSetLayout() {
-    auto vk = m_device->vkd();
-
-    static const std::array<VkDescriptorSetLayoutBinding, 4> bindings = {{
-      { 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT   },
-      { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT   },
-      { 2, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   1, VK_SHADER_STAGE_VERTEX_BIT   },
-      { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
+  const DxvkPipelineLayout* HudRenderer::createPipelineLayout() {
+    static const std::array<DxvkDescriptorSetLayoutBinding, 4> bindings = {{
+      { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,          1, VK_SHADER_STAGE_VERTEX_BIT   },
+      { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,          1, VK_SHADER_STAGE_VERTEX_BIT   },
+      { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,    1, VK_SHADER_STAGE_VERTEX_BIT   },
+      { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  1, VK_SHADER_STAGE_FRAGMENT_BIT },
     }};
 
-    VkDescriptorSetLayoutCreateInfo info = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-    info.bindingCount = bindings.size();
-    info.pBindings = bindings.data();
-
-    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-    VkResult vr = vk->vkCreateDescriptorSetLayout(vk->device(), &info, nullptr, &layout);
-
-    if (vr != VK_SUCCESS)
-      throw DxvkError(str::format("Failed to create HUD descriptor set layout: ", vr));
-
-    return layout;
-  }
-
-
-  VkPipelineLayout HudRenderer::createPipelineLayout() {
-    auto vk = m_device->vkd();
-
-    VkPushConstantRange pushConstantRange = { };
-    pushConstantRange.offset = 0u;
-    pushConstantRange.size = sizeof(HudPushConstants);
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    VkPipelineLayoutCreateInfo info = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-    info.setLayoutCount = 1;
-    info.pSetLayouts = &m_textSetLayout;
-    info.pushConstantRangeCount = 1;
-    info.pPushConstantRanges = &pushConstantRange;
-
-    VkPipelineLayout layout = VK_NULL_HANDLE;
-    VkResult vr = vk->vkCreatePipelineLayout(vk->device(), &info, nullptr, &layout);
-
-    if (vr != VK_SUCCESS)
-      throw DxvkError(str::format("Failed to create HUD descriptor set layout: ", vr));
-
-    return layout;
+    return m_device->createBuiltInPipelineLayout(
+      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+      sizeof(HudPushConstants), bindings.size(), bindings.data());
   }
 
 
@@ -555,34 +486,6 @@ namespace dxvk::hud {
 
     HudSpecConstants specConstants = getSpecConstants(key);
     VkSpecializationInfo specInfo = getSpecInfo(&specConstants);
-
-    std::array<VkPipelineShaderStageCreateInfo, 2> stages = { };
-    stages[0] = m_textVs.stageInfo;
-    stages[1] = m_textFs.stageInfo;
-    stages[1].pSpecializationInfo = &specInfo;
-
-    VkPipelineRenderingCreateInfo rtInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
-    rtInfo.colorAttachmentCount = 1;
-    rtInfo.pColorAttachmentFormats = &key.format;
-
-    VkPipelineVertexInputStateCreateInfo viState = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-
-    VkPipelineInputAssemblyStateCreateInfo iaState = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-    iaState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-    VkPipelineViewportStateCreateInfo vpState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-
-    VkPipelineRasterizationStateCreateInfo rsState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-    rsState.cullMode = VK_CULL_MODE_NONE;
-    rsState.polygonMode = VK_POLYGON_MODE_FILL;
-    rsState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rsState.lineWidth = 1.0f;
-
-    constexpr uint32_t sampleMask = 0x1;
-
-    VkPipelineMultisampleStateCreateInfo msState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-    msState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    msState.pSampleMask = &sampleMask;
 
     VkPipelineColorBlendAttachmentState cbAttachment = { };
     cbAttachment.blendEnable = VK_TRUE;
@@ -596,40 +499,13 @@ namespace dxvk::hud {
       VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-    VkPipelineColorBlendStateCreateInfo cbOpaqueState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-    cbOpaqueState.attachmentCount = 1;
-    cbOpaqueState.pAttachments = &cbAttachment;
+    util::DxvkBuiltInGraphicsState state;
+    state.vs = util::DxvkBuiltInShaderStage(hud_text_vert, nullptr);
+    state.fs = util::DxvkBuiltInShaderStage(hud_text_frag, &specInfo);
+    state.colorFormat = key.format;
+    state.cbAttachment = &cbAttachment;
 
-    static const std::array<VkDynamicState, 2> dynStates = {
-      VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT,
-      VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT,
-    };
-
-    VkPipelineDynamicStateCreateInfo dynState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-    dynState.dynamicStateCount = dynStates.size();
-    dynState.pDynamicStates = dynStates.data();
-
-    VkGraphicsPipelineCreateInfo blitInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rtInfo };
-    blitInfo.stageCount = stages.size();
-    blitInfo.pStages = stages.data();
-    blitInfo.pVertexInputState = &viState;
-    blitInfo.pInputAssemblyState = &iaState;
-    blitInfo.pViewportState = &vpState;
-    blitInfo.pRasterizationState = &rsState;
-    blitInfo.pMultisampleState = &msState;
-    blitInfo.pColorBlendState = &cbOpaqueState;
-    blitInfo.pDynamicState = &dynState;
-    blitInfo.layout = m_textPipelineLayout;
-    blitInfo.basePipelineIndex = -1;
-
-    VkPipeline pipeline = VK_NULL_HANDLE;
-    VkResult vr = vk->vkCreateGraphicsPipelines(vk->device(), VK_NULL_HANDLE,
-      1, &blitInfo, nullptr, &pipeline);
-
-    if (vr != VK_SUCCESS)
-      throw DxvkError(str::format("Failed to create swap chain blit pipeline: ", vr));
-
-    return pipeline;
+    return m_device->createBuiltInGraphicsPipeline(m_textPipelineLayout, state);
   }
 
 
