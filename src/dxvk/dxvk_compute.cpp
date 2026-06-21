@@ -16,7 +16,6 @@ namespace dxvk {
           DxvkDevice*                 device,
           DxvkPipelineManager*        pipeMgr,
           DxvkComputePipelineShaders  shaders,
-          DxvkBindingLayoutObjects*   layout,
           DxvkShaderPipelineLibrary*  library)
   : m_device        (device),
     m_stateCache    (&pipeMgr->m_stateCache),
@@ -24,7 +23,6 @@ namespace dxvk {
     m_library       (library),
     m_libraryHandle (VK_NULL_HANDLE),
     m_shaders       (std::move(shaders)),
-    m_bindings      (layout),
     m_layout        (pipeMgr, m_shaders.cs->getLayout()),
     m_debugName     (createDebugName()) {
 

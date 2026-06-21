@@ -60,7 +60,6 @@ namespace dxvk {
             DxvkDevice*                 device,
             DxvkPipelineManager*        pipeMgr,
             DxvkComputePipelineShaders  shaders,
-            DxvkBindingLayoutObjects*   layout,
             DxvkShaderPipelineLibrary*  library);
 
     ~DxvkComputePipeline();
@@ -71,18 +70,6 @@ namespace dxvk {
      */
     const DxvkComputePipelineShaders& shaders() const {
       return m_shaders;
-    }
-
-    /**
-     * \brief Pipeline layout
-     * 
-     * Stores the pipeline layout and the descriptor set
-     * layouts, as well as information on the resource
-     * slots used by the pipeline.
-     * \returns Pipeline layout
-     */
-    DxvkBindingLayoutObjects* getBindings() const {
-      return m_bindings;
     }
 
     /**
@@ -143,7 +130,6 @@ namespace dxvk {
     VkPipeline                  m_libraryHandle;
 
     DxvkComputePipelineShaders  m_shaders;
-    DxvkBindingLayoutObjects*   m_bindings;
 
     DxvkPipelineBindings        m_layout;
 

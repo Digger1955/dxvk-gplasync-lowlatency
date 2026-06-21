@@ -5674,8 +5674,7 @@ namespace dxvk {
         DxvkContextFlag::GpDirtyDepthBias,
         DxvkContextFlag::GpDirtyDepthBounds,
         DxvkContextFlag::GpDirtyDepthClip,
-        DxvkContextFlag::GpDirtyDepthTest,
-        DxvkContextFlag::DirtyPushConstants);
+        DxvkContextFlag::GpDirtyDepthTest);
 
       m_flags.clr(
         DxvkContextFlag::GpRenderPassSuspended,
@@ -6187,6 +6186,7 @@ namespace dxvk {
 
   void DxvkContext::unbindComputePipeline() {
     m_flags.set(DxvkContextFlag::CpDirtyPipelineState);
+    m_flags.clr(DxvkContextFlag::CpHasPushConstants);
 
     m_state.cp.pipeline = nullptr;
   }
@@ -6195,6 +6195,8 @@ namespace dxvk {
   bool DxvkContext::updateComputePipelineState() {
     if (unlikely(m_state.gp.pipeline != nullptr))
       this->unbindGraphicsPipeline();
+
+    m_flags.clr(DxvkContextFlag::CpHasPushConstants);
 
     // Look up pipeline object based on the bound compute shader
     auto newPipeline = lookupComputePipeline(m_state.cp.shaders);
@@ -6221,8 +6223,10 @@ namespace dxvk {
     // Mark compute resources and push constants as dirty
     m_descriptorState.dirtyStages(VK_SHADER_STAGE_COMPUTE_BIT);
 
-    if (newPipeline->getBindings()->layout().getPushConstantRange(true).size)
-      m_flags.set(DxvkContextFlag::DirtyPushConstants);
+    if (!newPipeline->getLayout()->getPushConstantRange().isEmpty()) {
+      m_flags.set(DxvkContextFlag::CpHasPushConstants,
+                  DxvkContextFlag::DirtyPushConstants);
+    }
 
     if (unlikely(m_features.test(DxvkContextFeature::DebugUtils))) {
       m_cmd->cmdInsertDebugUtilsLabel(DxvkCmdBuffer::ExecBuffer,
@@ -6235,23 +6239,24 @@ namespace dxvk {
   
   
   void DxvkContext::unbindGraphicsPipeline() {
-    m_flags.set(
-      DxvkContextFlag::GpDirtyPipeline,
-      DxvkContextFlag::GpDirtyPipelineState,
-      DxvkContextFlag::GpDirtyVertexBuffers,
-      DxvkContextFlag::GpDirtyIndexBuffer,
-      DxvkContextFlag::GpDirtyXfbBuffers,
-      DxvkContextFlag::GpDirtyBlendConstants,
-      DxvkContextFlag::GpDirtyStencilTest,
-      DxvkContextFlag::GpDirtyStencilRef,
-      DxvkContextFlag::GpDirtyMultisampleState,
-      DxvkContextFlag::GpDirtyRasterizerState,
-      DxvkContextFlag::GpDirtySampleLocations,
-      DxvkContextFlag::GpDirtyViewport,
-      DxvkContextFlag::GpDirtyDepthBias,
-      DxvkContextFlag::GpDirtyDepthBounds,
-      DxvkContextFlag::GpDirtyDepthClip,
-      DxvkContextFlag::GpDirtyDepthTest);
+    m_flags.set(DxvkContextFlag::GpDirtyPipeline,
+                DxvkContextFlag::GpDirtyPipelineState,
+                DxvkContextFlag::GpDirtyVertexBuffers,
+                DxvkContextFlag::GpDirtyIndexBuffer,
+                DxvkContextFlag::GpDirtyXfbBuffers,
+                DxvkContextFlag::GpDirtyBlendConstants,
+                DxvkContextFlag::GpDirtyStencilTest,
+                DxvkContextFlag::GpDirtyStencilRef,
+                DxvkContextFlag::GpDirtyMultisampleState,
+                DxvkContextFlag::GpDirtyRasterizerState,
+                DxvkContextFlag::GpDirtySampleLocations,
+                DxvkContextFlag::GpDirtyViewport,
+                DxvkContextFlag::GpDirtyDepthBias,
+                DxvkContextFlag::GpDirtyDepthBounds,
+                DxvkContextFlag::GpDirtyDepthClip,
+                DxvkContextFlag::GpDirtyDepthTest);
+
+    m_flags.clr(DxvkContextFlag::GpHasPushConstants);
 
     // Bind-skip: pipeline object is no longer valid
     m_lastBoundGraphicsPipeline = VK_NULL_HANDLE;
@@ -6289,9 +6294,6 @@ namespace dxvk {
 
     m_descriptorState.dirtyStages(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-    if (newPipeline->getBindings()->layout().getPushConstantRange(true).size)
-      m_flags.set(DxvkContextFlag::DirtyPushConstants);
-
     m_flags.clr(DxvkContextFlag::GpDirtyPipeline);
     return true;
   }
@@ -6311,6 +6313,7 @@ namespace dxvk {
                 DxvkContextFlag::GpDynamicMultisampleState,
                 DxvkContextFlag::GpDynamicRasterizerState,
                 DxvkContextFlag::GpDynamicSampleLocations,
+                DxvkContextFlag::GpHasPushConstants,
                 DxvkContextFlag::GpIndependentSets);
     
     m_flags.set(m_state.gp.state.useDynamicBlendConstants()
@@ -6404,6 +6407,14 @@ namespace dxvk {
 
     if (newIndependentSets != oldIndependentSets)
       m_descriptorState.dirtyStages(VK_SHADER_STAGE_ALL_GRAPHICS);
+
+    // Also update push constant status when we know the final layout
+    DxvkPushConstantRange pushConstants = m_state.gp.pipeline->getLayout()->getPushConstantRange();
+
+    if (pushConstants.getPushConstantRange(newIndependentSets).size) {
+      m_flags.set(DxvkContextFlag::GpHasPushConstants,
+                  DxvkContextFlag::DirtyPushConstants);
+    }
 
     // Emit barrier based on pipeline properties, in order to avoid
     // accidental write-after-read hazards after the render pass.
@@ -7436,9 +7447,10 @@ namespace dxvk {
     bool independentSets = BindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS
       && m_flags.test(DxvkContextFlag::GpIndependentSets);
 
-    VkPushConstantRange pushConstRange = bindings->getPushConstantRange(independentSets).getPushConstantRange();
+    VkPushConstantRange pushConstRange = bindings->getPushConstantRange()
+      .getPushConstantRange(independentSets);
 
-    if (!pushConstRange.size)
+    if (unlikely(!pushConstRange.size))
       return;
 
     m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
@@ -7462,9 +7474,8 @@ namespace dxvk {
   bool DxvkContext::commitComputeState() {
     this->spillRenderPass(false);
 
-    if (m_flags.any(
-      DxvkContextFlag::CpDirtyPipelineState,
-      DxvkContextFlag::CpDirtySpecConstants)) {
+    if (m_flags.any(DxvkContextFlag::CpDirtyPipelineState,
+                    DxvkContextFlag::CpDirtySpecConstants)) {
       if (unlikely(!this->updateComputePipelineState()))
         return false;
     }
@@ -7489,7 +7500,8 @@ namespace dxvk {
       }
     }
 
-    if (m_flags.test(DxvkContextFlag::DirtyPushConstants))
+    if (m_flags.all(DxvkContextFlag::CpHasPushConstants,
+                    DxvkContextFlag::DirtyPushConstants))
       this->updatePushConstants<VK_PIPELINE_BIND_POINT_COMPUTE>();
 
     return true;
@@ -7604,7 +7616,8 @@ namespace dxvk {
     
     this->updateDynamicState();
     
-    if (m_flags.test(DxvkContextFlag::DirtyPushConstants))
+    if (m_flags.all(DxvkContextFlag::GpHasPushConstants,
+                    DxvkContextFlag::DirtyPushConstants))
       this->updatePushConstants<VK_PIPELINE_BIND_POINT_GRAPHICS>();
 
     if (m_flags.test(DxvkContextFlag::DirtyDrawBuffer) && Indirect)
