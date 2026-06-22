@@ -445,11 +445,9 @@ namespace dxvk {
       m_deviceFeatures.khrSwapchainMaintenance1.swapchainMaintenance1 &&
       instance->extensions().khrSurfaceMaintenance1;
 
-    // Enable maintenance features if supported
-    enabledFeatures.khrMaintenance5.maintenance5 =
-      = VK_FALSE;
-    enabledFeatures.khrMaintenance7.maintenance7 =
-      = VK_FALSE;
+    // Disable maintenance features for testing purposes
+    enabledFeatures.khrMaintenance5.maintenance5 = VK_FALSE;
+    enabledFeatures.khrMaintenance7.maintenance7 = VK_FALSE;
 
     // Enable present id and present wait together, if possible
     enabledFeatures.khrPresentId.presentId =
