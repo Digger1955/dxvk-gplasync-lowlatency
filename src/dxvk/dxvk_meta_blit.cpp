@@ -1,5 +1,6 @@
 #include "dxvk_device.h"
 #include "dxvk_meta_blit.h"
+#include "dxvk_util.h"
 
 #include <dxvk_fullscreen_geom.h>
 #include <dxvk_fullscreen_vert.h>
