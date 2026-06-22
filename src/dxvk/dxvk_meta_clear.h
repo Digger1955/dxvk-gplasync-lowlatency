@@ -2,6 +2,7 @@
 
 #include "dxvk_format.h"
 #include "dxvk_include.h"
+#include "dxvk_pipelayout.h"
 
 #include "../spirv/spirv_code_buffer.h"
 
@@ -29,10 +30,9 @@ namespace dxvk {
    * and allocate a descriptor set.
    */
   struct DxvkMetaClearPipeline {
-    VkDescriptorSetLayout dsetLayout;
-    VkPipelineLayout      pipeLayout;
-    VkPipeline            pipeline;
-    VkExtent3D            workgroupSize;
+    const DxvkPipelineLayout* layout = nullptr;
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkExtent3D workgroupSize = { };
   };
   
   
@@ -47,9 +47,9 @@ namespace dxvk {
     
   public:
     
-    DxvkMetaClearObjects(const DxvkDevice* device);
+    DxvkMetaClearObjects(DxvkDevice* device);
     ~DxvkMetaClearObjects();
-    
+
     /**
      * \brief Retrieves objects to use for buffers
      * 
@@ -84,28 +84,22 @@ namespace dxvk {
       VkPipeline clearImg1DArray = VK_NULL_HANDLE;
       VkPipeline clearImg2DArray = VK_NULL_HANDLE;
     };
-    
-    Rc<vk::DeviceFn> m_vkd;
-    
-    VkDescriptorSetLayout m_clearBufDsetLayout = VK_NULL_HANDLE;
-    VkDescriptorSetLayout m_clearImgDsetLayout = VK_NULL_HANDLE;
-    
-    VkPipelineLayout m_clearBufPipeLayout = VK_NULL_HANDLE;
-    VkPipelineLayout m_clearImgPipeLayout = VK_NULL_HANDLE;
-    
+
+    DxvkDevice* m_device = nullptr;
+
+    const DxvkPipelineLayout* m_clearBufPipeLayout = VK_NULL_HANDLE;
+    const DxvkPipelineLayout* m_clearImgPipeLayout = VK_NULL_HANDLE;
+
     DxvkMetaClearPipelines m_clearPipesF32;
     DxvkMetaClearPipelines m_clearPipesU32;
-    
-    VkDescriptorSetLayout createDescriptorSetLayout(
+
+    const DxvkPipelineLayout* createPipelineLayout(
             VkDescriptorType        descriptorType);
-    
-    VkPipelineLayout createPipelineLayout(
-            VkDescriptorSetLayout   dsetLayout);
-    
+
     VkPipeline createPipeline(
       const SpirvCodeBuffer&        spirvCode,
-            VkPipelineLayout        pipeLayout);
-    
+      const DxvkPipelineLayout*     layout);
+
   };
-  
+
 }
