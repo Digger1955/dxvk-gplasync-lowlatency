@@ -114,8 +114,8 @@ namespace dxvk {
     const SpirvCodeBuffer&        spirvCode,
     const DxvkPipelineLayout*     layout) {
     util::DxvkBuiltInShaderStage stage = { };
-    stage.code = code;
-    stage.size = size;
+    stage.code = spirvCode.data();
+    stage.size = spirvCode.size();
 
     return m_device->createBuiltInComputePipeline(layout, stage);
   }
