@@ -106,6 +106,8 @@ namespace dxvk {
       const uint32_t                (&code)[N],
             VkPipelineLayout        pipeLayout) {
       return createPipeline(sizeof(uint32_t) * N, &code[0], pipeLayout);
+    }
+
   };
 
 }
