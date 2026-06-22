@@ -111,11 +111,12 @@ namespace dxvk {
 
 
   VkPipeline DxvkMetaClearObjects::createPipeline(
-    const SpirvCodeBuffer&        spirvCode,
+          size_t                  size,
+    const uint32_t*               code,
     const DxvkPipelineLayout*     layout) {
     util::DxvkBuiltInShaderStage stage = { };
-    stage.code = spirvCode.data();
-    stage.size = spirvCode.size();
+    stage.code = code;
+    stage.size = size;
 
     return m_device->createBuiltInComputePipeline(layout, stage);
   }

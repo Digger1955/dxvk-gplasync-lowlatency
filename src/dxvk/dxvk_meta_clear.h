@@ -97,9 +97,15 @@ namespace dxvk {
             VkDescriptorType        descriptorType);
 
     VkPipeline createPipeline(
-      const SpirvCodeBuffer&        spirvCode,
+            size_t                  size,
+      const uint32_t*               code,
       const DxvkPipelineLayout*     layout);
 
+    template<size_t N>
+    VkPipeline createPipeline(
+      const uint32_t                (&code)[N],
+            VkPipelineLayout        pipeLayout) {
+      return createPipeline(sizeof(uint32_t) * N, &code[0], pipeLayout);
   };
 
 }
