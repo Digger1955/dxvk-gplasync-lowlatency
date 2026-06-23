@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "dxvk_descriptor.h"
+#include "dxvk_descriptor_pool.h"
 #include "dxvk_format.h"
 #include "dxvk_hash.h"
 #include "dxvk_memory.h"
@@ -98,6 +98,15 @@ namespace dxvk {
      * \returns Buffer slice handle
      */
     DxvkBufferSliceHandle getSliceHandle() const;
+
+    /**
+     * \brief Retrieves raw buffer descriptor info
+     *
+     * Useful when accessing a buffer view as an
+     * unformatted storage or uniform buffer.
+     * \returns Raw buffer descriptor info
+     */
+    VkDescriptorBufferInfo getRawDescriptorInfo() const;
 
     /**
      * \brief Element count
@@ -688,6 +697,11 @@ namespace dxvk {
 
   inline DxvkBufferSliceHandle DxvkBufferView::getSliceHandle() const {
     return m_buffer->getSliceHandle(m_key.offset, m_key.size);
+  }
+
+
+  inline VkDescriptorBufferInfo DxvkBufferView::getRawDescriptorInfo() const {
+    return m_buffer->getDescriptor(m_key.offset, m_key.size).buffer;
   }
 
 

@@ -81,9 +81,8 @@ namespace dxvk {
    * that is used for blitting.
    */
   struct DxvkMetaBlitPipeline {
-    VkDescriptorSetLayout dsetLayout;
-    VkPipelineLayout      pipeLayout;
-    VkPipeline            pipeHandle;
+    const DxvkPipelineLayout* layout    = nullptr;
+    VkPipeline                pipeline  = VK_NULL_HANDLE;;
   };
   
 
@@ -98,10 +97,10 @@ namespace dxvk {
   class DxvkMetaBlitObjects {
     
   public:
-    
-    DxvkMetaBlitObjects(const DxvkDevice* device);
+
+    DxvkMetaBlitObjects(DxvkDevice* device);
     ~DxvkMetaBlitObjects();
-    
+
     /**
      * \brief Creates a blit pipeline
      * 
@@ -116,40 +115,28 @@ namespace dxvk {
             VkSampleCountFlagBits samples);
     
   private:
-    
-    Rc<vk::DeviceFn>  m_vkd;
-    
-    VkShaderModule m_shaderVert   = VK_NULL_HANDLE;
-    VkShaderModule m_shaderGeom   = VK_NULL_HANDLE;
-    VkShaderModule m_shaderFrag1D = VK_NULL_HANDLE;
-    VkShaderModule m_shaderFrag2D = VK_NULL_HANDLE;
-    VkShaderModule m_shaderFrag3D = VK_NULL_HANDLE;
-    
+
+    DxvkDevice* m_device = nullptr;
+
+    const DxvkPipelineLayout* m_layout = nullptr;
+
     dxvk::mutex m_mutex;
     
     std::unordered_map<
       DxvkMetaBlitPipelineKey,
       DxvkMetaBlitPipeline,
       DxvkHash, DxvkEq> m_pipelines;
-    
-    VkShaderModule createShaderModule(
-      const SpirvCodeBuffer&            code) const;
-    
+
     DxvkMetaBlitPipeline createPipeline(
       const DxvkMetaBlitPipelineKey&    key);
-    
-    VkDescriptorSetLayout createDescriptorSetLayout(
-            VkImageViewType             viewType) const;
-    
-    VkPipelineLayout createPipelineLayout(
-            VkDescriptorSetLayout       descriptorSetLayout) const;
-    
+
+    const DxvkPipelineLayout* createPipelineLayout() const;
+
     VkPipeline createPipeline(
-            VkPipelineLayout            pipelineLayout,
             VkImageViewType             imageViewType,
             VkFormat                    format,
             VkSampleCountFlagBits       samples) const;
-    
+
   };
-  
+
 }

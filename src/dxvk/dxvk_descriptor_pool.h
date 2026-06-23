@@ -10,7 +10,7 @@
 namespace dxvk {
 
   class DxvkDevice;
-  class DxvkDescriptorManager;
+  class DxvkDescriptorPoolSet;
   
   /**
    * \brief Descriptor info
@@ -75,7 +75,7 @@ namespace dxvk {
 
     DxvkDescriptorPool(
             DxvkDevice*               device,
-            DxvkDescriptorManager*    manager);
+            DxvkDescriptorPoolSet*    manager);
 
     ~DxvkDescriptorPool();
 
@@ -90,12 +90,12 @@ namespace dxvk {
     /**
      * \brief Allocates one or multiple descriptor sets
      *
-     * \param [in] layout Binding layout
+     * \param [in] layout Pipeline layout
      * \param [in] setMask Descriptor set mask
      * \param [out] sets Descriptor sets
      */
     void alloc(
-      const DxvkBindingLayoutObjects* layout,
+      const DxvkPipelineLayout*       layout,
             uint32_t                  setMask,
             VkDescriptorSet*          sets);
 
@@ -106,7 +106,7 @@ namespace dxvk {
      * \returns The descriptor set
      */
     VkDescriptorSet alloc(
-            VkDescriptorSetLayout     layout);
+      const DxvkDescriptorSetLayout*  layout);
 
     /**
      * \brief Resets pool
@@ -122,20 +122,20 @@ namespace dxvk {
   private:
 
     DxvkDevice*               m_device;
-    DxvkDescriptorManager*    m_manager;
+    DxvkDescriptorPoolSet*    m_manager;
 
     std::vector<VkDescriptorPool> m_descriptorPools;
 
     std::unordered_map<
-      VkDescriptorSetLayout,
+      const DxvkDescriptorSetLayout*,
       DxvkDescriptorSetList>  m_setLists;
 
     std::unordered_map<
-      const DxvkBindingLayoutObjects*,
+      const DxvkPipelineLayout*,
       DxvkDescriptorSetMap>   m_setMaps;
 
     std::pair<
-      const DxvkBindingLayoutObjects*,
+      const DxvkPipelineLayout*,
       DxvkDescriptorSetMap*>  m_cachedEntry;
 
     uint32_t m_setsAllocated  = 0;
@@ -144,21 +144,21 @@ namespace dxvk {
     uint32_t m_prevSetsAllocated = 0;
 
     DxvkDescriptorSetMap* getSetMapCached(
-      const DxvkBindingLayoutObjects*           layout);
+      const DxvkPipelineLayout*                 layout);
 
     DxvkDescriptorSetMap* getSetMap(
-      const DxvkBindingLayoutObjects*           layout);
+      const DxvkPipelineLayout*                 layout);
 
     DxvkDescriptorSetList* getSetList(
-            VkDescriptorSetLayout               layout);
+      const DxvkDescriptorSetLayout*            layout);
 
-    VkDescriptorSet allocSet(
-            DxvkDescriptorSetList*    list,
-            VkDescriptorSetLayout               layout);
+    VkDescriptorSet allocSetWithLayout(
+            DxvkDescriptorSetList*              list,
+      const DxvkDescriptorSetLayout*            layout);
 
     VkDescriptorSet allocSetFromPool(
             VkDescriptorPool                    pool,
-            VkDescriptorSetLayout               layout);
+      const DxvkDescriptorSetLayout*            layout);
 
     VkDescriptorPool addPool();
 
@@ -167,14 +167,14 @@ namespace dxvk {
   /*
    * \brief Descriptor pool manager
    */
-  class DxvkDescriptorManager : public RcObject {
+  class DxvkDescriptorPoolSet : public RcObject {
 
   public:
 
-    DxvkDescriptorManager(
+    DxvkDescriptorPoolSet(
             DxvkDevice*                 device);
 
-    ~DxvkDescriptorManager();
+    ~DxvkDescriptorPoolSet();
 
     /**
      * \brief Queries maximum number of descriptor sets per pool

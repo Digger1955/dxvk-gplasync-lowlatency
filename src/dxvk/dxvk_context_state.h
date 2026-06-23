@@ -55,10 +55,12 @@ namespace dxvk {
     GpDynamicRasterizerState,   ///< Cull mode and front face are dynamic
     GpDynamicSampleLocations,   ///< Sample locations are dynamic
     GpDynamicVertexStrides,     ///< Vertex buffer strides are dynamic
+    GpHasPushConstants,         ///< Graphics pipeline uses push constants
     GpIndependentSets,          ///< Graphics pipeline layout was created with independent sets
 
     CpDirtyPipelineState,       ///< Compute pipeline is out of date
     CpDirtySpecConstants,       ///< Compute spec constants are out of date
+    CpHasPushConstants,         ///< Compute pipeline uses push constants
 
     DirtyDrawBuffer,            ///< Indirect argument buffer is dirty
     DirtyPushConstants,         ///< Push constant data has changed
@@ -226,5 +228,16 @@ namespace dxvk {
     DxvkGraphicsPipelineState gp;
     DxvkComputePipelineState  cp;
   };
-  
+
+
+  /**
+   * \brief View pair
+   *
+   * Stores a buffer view and an image view.
+   */
+  struct DxvkViewPair {
+    Rc<DxvkBufferView> bufferView;
+    Rc<DxvkImageView> imageView;
+  };
+
 }

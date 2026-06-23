@@ -505,7 +505,6 @@ namespace dxvk {
             DxvkDevice*                 device,
             DxvkPipelineManager*        pipeMgr,
             DxvkGraphicsPipelineShaders shaders,
-            DxvkBindingLayoutObjects*   layout,
             DxvkShaderPipelineLibrary*  vsLibrary,
             DxvkShaderPipelineLibrary*  fsLibrary);
 
@@ -518,7 +517,7 @@ namespace dxvk {
     const DxvkGraphicsPipelineShaders& shaders() const {
       return m_shaders;
     }
-    
+
     /**
      * \brief Returns graphics pipeline flags
      * \returns Graphics pipeline property flags
@@ -526,17 +525,13 @@ namespace dxvk {
     DxvkGraphicsPipelineFlags flags() const {
       return m_flags;
     }
-    
+
     /**
-     * \brief Pipeline layout
-     * 
-     * Stores the pipeline layout and the descriptor set
-     * layout, as well as information on the resource
-     * slots used by the pipeline.
+     * \brief Queries pipeline layout
      * \returns Pipeline layout
      */
-    DxvkBindingLayoutObjects* getBindings() const {
-      return m_bindings;
+    const DxvkPipelineBindings* getLayout() const {
+      return &m_layout;
     }
 
     /**
@@ -625,7 +620,7 @@ namespace dxvk {
     DxvkPipelineStats*          m_stats;
 
     DxvkGraphicsPipelineShaders m_shaders;
-    DxvkBindingLayoutObjects*   m_bindings;
+    DxvkPipelineBindings        m_layout;
     DxvkGlobalPipelineBarrier   m_barrier;
     DxvkGraphicsPipelineFlags   m_flags;
 
@@ -705,11 +700,13 @@ namespace dxvk {
     bool validatePipelineState(
       const DxvkGraphicsPipelineStateInfo& state,
             bool                           trusted) const;
-    
+
+    DxvkPipelineLayoutBuilder buildPipelineLayout() const;
+
     void writePipelineStateToCache(
       const DxvkGraphicsPipelineStateInfo& state,
       const DxvkDepthStencilState&         dynDs) const;
-    
+
     void logPipelineState(
             LogLevel                       level,
       const DxvkGraphicsPipelineStateInfo& state) const;
@@ -717,5 +714,5 @@ namespace dxvk {
     std::string createDebugName() const;
 
   };
-  
+
 }
