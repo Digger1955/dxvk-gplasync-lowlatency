@@ -3,7 +3,7 @@
 #include "dxvk_include.h"
 
 namespace dxvk {
-  
+
   enum DxvkLimits : size_t {
     MaxNumRenderTargets         =     8,
     MaxNumVertexAttributes      =    32,
@@ -19,7 +19,7 @@ namespace dxvk {
     MaxNumSpecConstants         =    20,
     MaxUniformBufferSize        = 65536,
     MaxVertexBindingStride      =  2048,
-    MaxPushConstantSize         =   128,
+    MaxPushConstantSize         =    64,
   };
-  
+
 }

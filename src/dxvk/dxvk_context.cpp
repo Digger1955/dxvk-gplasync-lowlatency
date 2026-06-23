@@ -803,7 +803,9 @@ namespace dxvk {
     }
 
     auto pipeInfo = m_common->metaCopy().getCopyFormattedBufferPipeline();
-    VkDescriptorSet descriptorSet = m_descriptorPool->alloc(pipeInfo.dsetLayout);
+
+    VkPipelineLayout pipelineLayout = pipeInfo.layout->getPipelineLayout(false);
+    VkDescriptorSet descriptorSet = m_descriptorPool->alloc(pipeInfo.layout->getDescriptorSetLayout(0));
 
     std::array<VkWriteDescriptorSet, 2> descriptorWrites;
 
@@ -838,14 +840,14 @@ namespace dxvk {
     args.srcSize = { srcSize.width, srcSize.height };
 
     m_cmd->cmdBindPipeline(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_COMPUTE, pipeInfo.pipeHandle);
+      VK_PIPELINE_BIND_POINT_COMPUTE, pipeInfo.pipeline);
     
     m_cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_COMPUTE, pipeInfo.pipeLayout,
+      VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout,
       descriptorSet, 0, nullptr);
     
     m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
-      pipeInfo.pipeLayout, VK_SHADER_STAGE_COMPUTE_BIT,
+      pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT,
       0, sizeof(args), &args);
     
     m_cmd->cmdDispatch(DxvkCmdBuffer::ExecBuffer,
@@ -3969,8 +3971,10 @@ namespace dxvk {
     DxvkMetaCopyPipeline pipeline = m_common->metaCopy().getCopyBufferToImagePipeline(
       image->info().format, bufferFormat, imageSubresource.aspectMask);
 
+    VkPipelineLayout pipelineLayout = pipeline.layout->getPipelineLayout(false);
+
     VkWriteDescriptorSet descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-    descriptorWrite.dstSet = m_descriptorPool->alloc(pipeline.dsetLayout);
+    descriptorWrite.dstSet = m_descriptorPool->alloc(pipeline.layout->getDescriptorSetLayout(0));
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
     descriptorWrite.descriptorCount = 1;
     descriptorWrite.pTexelBufferView = &bufferViewHandle;
@@ -3986,14 +3990,14 @@ namespace dxvk {
 
     if (imageSubresource.aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT || !needsBitwiseStencilCopy) {
       m_cmd->cmdBindPipeline(DxvkCmdBuffer::ExecBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeHandle);
+        VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
       m_cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeLayout,
+        VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
         descriptorWrite.dstSet, 0, nullptr);
 
       m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
-        pipeline.pipeLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
+        pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
         0, sizeof(pushConst), &pushConst);
 
       m_cmd->cmdDraw(3, renderingInfo.layerCount, 0, 0);
@@ -4019,17 +4023,17 @@ namespace dxvk {
       }
 
       m_cmd->cmdBindPipeline(DxvkCmdBuffer::ExecBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeHandle);
+        VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
       m_cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeLayout,
+        VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
         descriptorWrite.dstSet, 0, nullptr);
 
       for (uint32_t i = 0; i < 8; i++) {
         pushConst.stencilBitIndex = i;
 
         m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
-          pipeline.pipeLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
+          pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
           0, sizeof(pushConst), &pushConst);
 
         m_cmd->cmdSetStencilWriteMask(VK_STENCIL_FACE_FRONT_AND_BACK, 1u << i);
@@ -4192,7 +4196,7 @@ namespace dxvk {
     DxvkMetaCopyPipeline pipeline = m_common->metaCopy().getCopyImageToBufferPipeline(viewType, bufferFormat);
 
     m_cmd->cmdBindPipeline(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeHandle);
+      VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
 
     // Create image views  for the main and stencil aspects
     VkDescriptorImageInfo imageDescriptor = { };
@@ -4227,7 +4231,8 @@ namespace dxvk {
       stencilDescriptor.imageLayout = imageLayout;
     }
 
-    VkDescriptorSet set = m_descriptorPool->alloc(pipeline.dsetLayout);
+    VkPipelineLayout pipelineLayout = pipeline.layout->getPipelineLayout(false);
+    VkDescriptorSet set = m_descriptorPool->alloc(pipeline.layout->getDescriptorSetLayout(0));
 
     std::array<VkWriteDescriptorSet, 3> descriptorWrites = {{
       { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
@@ -4243,7 +4248,7 @@ namespace dxvk {
       descriptorWrites.data());
 
     m_cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeLayout,
+      VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout,
       set, 0, nullptr);
 
     // Set up shader arguments
@@ -4255,7 +4260,7 @@ namespace dxvk {
     pushConst.bufferImageHeight = slicePitch / rowPitch;
 
     m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
-      pipeline.pipeLayout, VK_SHADER_STAGE_COMPUTE_BIT,
+      pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT,
       0, sizeof(pushConst), &pushConst);
 
     // Compute number of workgroups and dispatch shader
@@ -4713,8 +4718,9 @@ namespace dxvk {
     DxvkMetaCopyPipeline pipeInfo = m_common->metaCopy().getCopyImagePipeline(
       views.srcImageView->info().viewType, viewFormats.dstFormat, dstImage->info().sampleCount);
 
-    // Create and initialize descriptor set    
-    VkDescriptorSet descriptorSet = m_descriptorPool->alloc(pipeInfo.dsetLayout);
+    // Create and initialize descriptor set
+    VkPipelineLayout pipelineLayout = pipeInfo.layout->getPipelineLayout(false);
+    VkDescriptorSet descriptorSet = m_descriptorPool->alloc(pipeInfo.layout->getDescriptorSetLayout(0));
 
     std::array<VkDescriptorImageInfo, 2> descriptorImages = {{
       { VK_NULL_HANDLE, views.srcImageView->handle(), srcLayout },
@@ -4784,10 +4790,12 @@ namespace dxvk {
 
     // Perform the actual copy operation
     m_cmd->cmdBeginRendering(&renderingInfo);
+
     m_cmd->cmdBindPipeline(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS, pipeInfo.pipeHandle);
+      VK_PIPELINE_BIND_POINT_GRAPHICS, pipeInfo.pipeline);
+
     m_cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS, pipeInfo.pipeLayout,
+      VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
       descriptorSet, 0, nullptr);
 
     m_cmd->cmdSetViewport(1, &viewport);
@@ -4796,11 +4804,11 @@ namespace dxvk {
     VkOffset2D srcCoordOffset = {
       srcOffset.x - dstOffset.x,
       srcOffset.y - dstOffset.y };
-    
+
     m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
-      pipeInfo.pipeLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
+      pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
       0, sizeof(srcCoordOffset), &srcCoordOffset);
-    
+
     m_cmd->cmdDraw(3, dstSubresource.layerCount, 0, 0);
     m_cmd->cmdEndRendering();
 
@@ -5281,8 +5289,9 @@ namespace dxvk {
     DxvkMetaResolvePipeline pipeInfo = m_common->metaResolve().getPipeline(
       dstFormat, srcImage->info().sampleCount, depthMode, stencilMode);
 
-    // Create and initialize descriptor set    
-    VkDescriptorSet descriptorSet = m_descriptorPool->alloc(pipeInfo.dsetLayout);
+    // Create and initialize descriptor set
+    VkPipelineLayout pipelineLayout = pipeInfo.layout->getPipelineLayout(false);
+    VkDescriptorSet descriptorSet = m_descriptorPool->alloc(pipeInfo.layout->getDescriptorSetLayout(0));
 
     std::array<VkDescriptorImageInfo, 2> descriptorImages = {{
       { VK_NULL_HANDLE, views.srcImageView->handle(), srcLayout },
@@ -5352,19 +5361,25 @@ namespace dxvk {
     VkOffset2D srcOffset = {
       region.srcOffset.x - region.dstOffset.x,
       region.srcOffset.y - region.dstOffset.y };
-    
+
     m_cmd->cmdBeginRendering(&renderingInfo);
+
     m_cmd->cmdBindPipeline(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS, pipeInfo.pipeHandle);
-    m_cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS, pipeInfo.pipeLayout,
-      descriptorSet, 0, nullptr);
+      VK_PIPELINE_BIND_POINT_GRAPHICS, pipeInfo.pipeline);
+
     m_cmd->cmdSetViewport(1, &viewport);
     m_cmd->cmdSetScissor(1, &scissor);
+
+    m_cmd->cmdBindDescriptorSet(DxvkCmdBuffer::ExecBuffer,
+      VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
+      descriptorSet, 0, nullptr);
+
     m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
-      pipeInfo.pipeLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
+      pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
       0, sizeof(srcOffset), &srcOffset);
+
     m_cmd->cmdDraw(3, region.dstSubresource.layerCount, 0, 0);
+
     m_cmd->cmdEndRendering();
 
     accessImage(DxvkCmdBuffer::ExecBuffer, *srcImage, srcSubresourceRange,
