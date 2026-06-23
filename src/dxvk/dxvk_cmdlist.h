@@ -4,7 +4,7 @@
 
 #include "dxvk_bind_mask.h"
 #include "dxvk_buffer.h"
-#include "dxvk_descriptor.h"
+#include "dxvk_descriptor_pool.h"
 #include "dxvk_fence.h"
 #include "dxvk_gpu_event.h"
 #include "dxvk_gpu_query.h"
@@ -1150,7 +1150,7 @@ namespace dxvk {
 
     void trackDescriptorPool(
       const Rc<DxvkDescriptorPool>&       pool,
-      const Rc<DxvkDescriptorManager>&    manager) {
+      const Rc<DxvkDescriptorPoolSet>&    manager) {
       pool->updateStats(m_statCounters);
       m_descriptorPools.push_back({ pool, manager });
     }
@@ -1186,10 +1186,10 @@ namespace dxvk {
 
     small_vector<DxvkCommandSubmissionInfo, 4> m_cmdSubmissions;
     small_vector<DxvkSparseBindSubmission, 4>  m_cmdSparseBinds;
-    
+
     std::vector<std::pair<
       Rc<DxvkDescriptorPool>,
-      Rc<DxvkDescriptorManager>>> m_descriptorPools;
+      Rc<DxvkDescriptorPoolSet>>> m_descriptorPools;
 
     std::vector<DxvkGraphicsPipeline*> m_pipelines;
 
