@@ -9,7 +9,7 @@ namespace dxvk {
     const D3D11_SAMPLER_DESC& desc,
           Container*          container)
   : D3D11StateObject<ID3D11SamplerState, D3D11SamplerState>(device, container),
-    m_desc(desc), m_d3d10(this) {
+    m_desc(desc), m_d3d10(this), m_destructionNotifier(this) {
     DxvkSamplerKey info = { };
 
     // While D3D11_FILTER is technically an enum, its value bits
@@ -85,7 +85,12 @@ namespace dxvk {
       *ppvObject = ref(&m_d3d10);
       return S_OK;
     }
-    
+
+    if (riid == __uuidof(ID3DDestructionNotifier)) {
+      *ppvObject = ref(&m_destructionNotifier);
+      return S_OK;
+    }
+
     if (logQueryInterfaceError(__uuidof(ID3D11SamplerState), riid)) {
       Logger::warn("D3D11SamplerState::QueryInterface: Unknown interface query");
       Logger::warn(str::format(riid));

@@ -990,9 +990,11 @@ namespace dxvk {
     D3D11ReflexDevice   m_d3d11Reflex;
     D3D11on12Device     m_d3d11on12;
     DXGIDXVKDevice      m_metaDevice;
-    
+
     DXGIVkSwapChainFactory   m_dxvkFactory;
-    
+
+    D3DDestructionNotifier   m_destructionNotifier;
+
     uint32_t m_frameLatency = DefaultFrameLatency;
 
   };
