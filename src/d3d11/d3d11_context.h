@@ -918,10 +918,26 @@ namespace dxvk {
             UINT                              Slot,
             D3D11UnorderedAccessView*         pUav);
 
+    void ClearImageView(
+            Rc<DxvkImageView>                 View,
+      const FLOAT                             Color[4],
+      const D3D11_RECT*                       pRects,
+            UINT                              NumRects);
+
+    void ClearBufferView(
+            Rc<DxvkBufferView>                View,
+      const FLOAT                             Color[4],
+      const D3D11_RECT*                       pRects,
+            UINT                              NumRects);
+
     VkClearValue ConvertColorValue(
       const FLOAT                             Color[4],
       const DxvkFormatInfo*                   pFormatInfo);
-    
+
+    VkRect2D ConvertRect(
+            D3D11_RECT                        Rect,
+            VkExtent2D                        Extent);
+
     void CopyBuffer(
             D3D11Buffer*                      pDstBuffer,
             VkDeviceSize                      DstOffset,
@@ -1090,6 +1106,12 @@ namespace dxvk {
             ID3D11Buffer*                     pBufferForArgs,
             ID3D11Buffer*                     pBufferForCount);
 
+    void SyncImage(
+      const Rc<DxvkImage>&                    DstImage,
+      const VkImageSubresourceLayers&         DstLayers,
+      const Rc<DxvkImage>&                    SrcImage,
+      const VkImageSubresourceLayers&         SrcLayers);
+
     bool TestRtvUavHazards(
             UINT                              NumRTVs,
             ID3D11RenderTargetView* const*    ppRTVs,
@@ -1156,7 +1178,7 @@ namespace dxvk {
     static DxvkBlendMode InitDefaultBlendState();
 
     template<bool AllowFlush = true, typename Cmd>
-    void EmitCs(Cmd&& command, bool disableFlush=false ) {
+    void EmitCs(Cmd&& command) {
       if (unlikely(m_csDataType != D3D11CmdType::None)) {
         m_csData = nullptr;
         m_csDataType = D3D11CmdType::None;
@@ -1167,8 +1189,7 @@ namespace dxvk {
         m_csChunk = AllocCsChunk();
 
         if constexpr (!IsDeferred && AllowFlush)
-          if (!disableFlush)
-            GetTypedContext()->ConsiderFlush(GpuFlushType::ImplicitWeakHint);
+          GetTypedContext()->ConsiderFlush(GpuFlushType::ImplicitWeakHint);
 
         m_csChunk->push(command);
       }
