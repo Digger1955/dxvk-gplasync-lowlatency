@@ -524,9 +524,15 @@ namespace dxvk {
 
     Com<D3D11ImmediateContext, false> m_context;
 
+    DxvkShaderKey ComputeShaderKey(
+            VkShaderStageFlagBits   ShaderStage,
+      const void*                   pShaderBytecode,
+            size_t                  BytecodeLength,
+      const DxbcModuleInfo*         pModuleInfo);
+
     HRESULT CreateShaderModule(
             D3D11CommonShader*      pShaderModule,
-            DxvkShaderKey           ShaderKey,
+            VkShaderStageFlagBits   ShaderStage,
       const void*                   pShaderBytecode,
             size_t                  BytecodeLength,
             ID3D11ClassLinkage*     pClassLinkage,
