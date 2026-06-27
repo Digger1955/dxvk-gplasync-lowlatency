@@ -6,6 +6,7 @@
 #include "dxvk_access.h"
 #include "dxvk_adapter.h"
 #include "dxvk_allocator.h"
+#include "dxvk_descriptor.h"
 #include "dxvk_hash.h"
 
 #include "../util/util_time.h"
@@ -259,8 +260,9 @@ namespace dxvk {
   struct DxvkBufferViewKey {
     /// Buffer view format
     VkFormat format = VK_FORMAT_UNDEFINED;
-    /// View usage. Must include one or both texel buffer flags.
-    VkBufferUsageFlags usage = 0u;
+    /// View usage. Must include one or both texel buffer flags for
+    /// formatted views, or the storage buffer bit for raw views.
+    VkBufferUsageFlagBits usage = VkBufferUsageFlagBits(0u);
     /// Buffer offset, in bytes
     VkDeviceSize offset = 0u;
     /// Buffer view size, in bytes
@@ -304,7 +306,7 @@ namespace dxvk {
      * \param [in] baseOffset Buffer offset
      * \returns Buffer view handle
      */
-    VkBufferView createBufferView(
+    const DxvkDescriptor* createBufferView(
       const DxvkBufferViewKey&          key,
             VkDeviceSize                baseOffset);
 
@@ -316,7 +318,7 @@ namespace dxvk {
 
     dxvk::mutex       m_mutex;
     std::unordered_map<DxvkBufferViewKey,
-      VkBufferView, DxvkHash, DxvkEq> m_views;
+      DxvkDescriptor, DxvkHash, DxvkEq> m_views;
 
   };
 
@@ -331,9 +333,11 @@ namespace dxvk {
     /// View type
     VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     /// View usage flags
-    VkImageUsageFlags usage = 0u;
+    VkImageUsageFlagBits usage = VkImageUsageFlagBits(0u);
     /// View format
     VkFormat format = VK_FORMAT_UNDEFINED;
+    /// Image layout that the view will be used as
+    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     /// Aspect flags to include in this view
     VkImageAspectFlags aspects = 0u;
     /// First mip
@@ -352,6 +356,7 @@ namespace dxvk {
       hash.add(uint32_t(viewType));
       hash.add(uint32_t(usage));
       hash.add(uint32_t(format));
+      hash.add(uint32_t(layout));
       hash.add(uint32_t(aspects));
       hash.add(uint32_t(mipIndex) | (uint32_t(mipCount) << 16));
       hash.add(uint32_t(layerIndex) | (uint32_t(layerCount) << 16));
@@ -363,6 +368,7 @@ namespace dxvk {
       return viewType == other.viewType
           && usage == other.usage
           && format == other.format
+          && layout == other.layout
           && aspects == other.aspects
           && mipIndex == other.mipIndex
           && mipCount == other.mipCount
@@ -405,9 +411,9 @@ namespace dxvk {
      * \brief Creates an image view
      *
      * \param [in] key View properties
-     * \returns Image view handle
+     * \returns Pointer to descriptor info
      */
-    VkImageView createImageView(
+    const DxvkDescriptor* createImageView(
       const DxvkImageViewKey&           key);
 
   private:
@@ -417,7 +423,7 @@ namespace dxvk {
 
     dxvk::mutex       m_mutex;
     std::unordered_map<DxvkImageViewKey,
-      VkImageView, DxvkHash, DxvkEq> m_views;
+      DxvkDescriptor, DxvkHash, DxvkEq> m_views;
 
   };
 
@@ -606,7 +612,7 @@ namespace dxvk {
      * \param [in] key View properties
      * \returns Buffer view handle
      */
-    VkBufferView createBufferView(
+    const DxvkDescriptor* createBufferView(
       const DxvkBufferViewKey&          key);
 
     /**
@@ -615,7 +621,7 @@ namespace dxvk {
      * \param [in] key View properties
      * \returns Image view handle
      */
-    VkImageView createImageView(
+    const DxvkDescriptor* createImageView(
       const DxvkImageViewKey&           key);
 
   private:

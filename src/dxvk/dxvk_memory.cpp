@@ -47,11 +47,11 @@ namespace dxvk {
 
   DxvkResourceBufferViewMap::~DxvkResourceBufferViewMap() {
     for (const auto& view : m_views)
-      m_vkd->vkDestroyBufferView(m_vkd->device(), view.second, nullptr);
+      m_vkd->vkDestroyBufferView(m_vkd->device(), view.second.legacy.bufferView, nullptr);
   }
 
 
-  VkBufferView DxvkResourceBufferViewMap::createBufferView(
+  const DxvkDescriptor* DxvkResourceBufferViewMap::createBufferView(
     const DxvkBufferViewKey&          key,
           VkDeviceSize                baseOffset) {
     std::lock_guard lock(m_mutex);
@@ -59,35 +59,44 @@ namespace dxvk {
     auto entry = m_views.find(key);
 
     if (entry != m_views.end())
-      return entry->second;
+     return &entry->second;
 
-    VkBufferUsageFlags2CreateInfoKHR flags = { VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO_KHR };
-    flags.usage = key.usage;
+    DxvkDescriptor descriptor = { };
 
-    VkBufferViewCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO };
-    info.buffer = m_buffer;
-    info.format = key.format;
-    info.offset = key.offset + baseOffset;
-    info.range = key.size;
+    if (key.format) {
+      VkBufferUsageFlags2CreateInfoKHR flags = { VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO_KHR };
+      flags.usage = key.usage;
 
     if (m_passBufferUsage)
       info.pNext = &flags;
 
-    VkBufferView view = VK_NULL_HANDLE;
+      VkBufferViewCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO, &flags };
+      info.buffer = m_buffer;
+      info.format = key.format;
+      info.offset = key.offset + baseOffset;
+      info.range = key.size;
 
-    VkResult vr = m_vkd->vkCreateBufferView(
-      m_vkd->device(), &info, nullptr, &view);
+      VkResult vr = m_vkd->vkCreateBufferView(
+        m_vkd->device(), &info, nullptr, &descriptor.legacy.bufferView);
 
-    if (vr != VK_SUCCESS) {
-      throw DxvkError(str::format("Failed to create Vulkan buffer view: ", vr,
-        "\n   usage:  0x", std::hex, key.usage,
-        "\n   format: ", key.format,
-        "\n   offset: ", std::dec, key.offset,
-        "\n   size:   ", std::dec, key.size));
+      if (vr != VK_SUCCESS) {
+        throw DxvkError(str::format("Failed to create Vulkan buffer view: ", vr,
+          "\n   usage:  0x", std::hex, key.usage,
+          "\n   format: ", key.format,
+          "\n   offset: ", std::dec, key.offset,
+          "\n   size:   ", std::dec, key.size));
+      }
+    } else {
+      VkDescriptorBufferInfo bufferInfo = descriptor.legacy.buffer;
+      bufferInfo.buffer = m_buffer;
+      bufferInfo.offset = key.offset + baseOffset;
+      bufferInfo.range = key.size;
+
+      descriptor.legacy.buffer = bufferInfo;
     }
 
-    m_views.insert({ key, view });
-    return view;
+    entry = m_views.insert({ key, descriptor }).first;
+    return &entry->second;
   }
 
 
@@ -103,18 +112,18 @@ namespace dxvk {
 
   DxvkResourceImageViewMap::~DxvkResourceImageViewMap() {
     for (const auto& view : m_views)
-      m_vkd->vkDestroyImageView(m_vkd->device(), view.second, nullptr);
+      m_vkd->vkDestroyImageView(m_vkd->device(), view.second.legacy.image.imageView, nullptr);
   }
 
 
-  VkImageView DxvkResourceImageViewMap::createImageView(
+  const DxvkDescriptor* DxvkResourceImageViewMap::createImageView(
     const DxvkImageViewKey&           key) {
     std::lock_guard lock(m_mutex);
 
     auto entry = m_views.find(key);
 
     if (entry != m_views.end())
-      return entry->second;
+      return &entry->second;
 
     VkImageViewUsageCreateInfo usage = { VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO };
     usage.usage = key.usage;
@@ -130,16 +139,17 @@ namespace dxvk {
     info.subresourceRange.baseArrayLayer = key.layerIndex;
     info.subresourceRange.layerCount = key.layerCount;
 
-    VkImageView view = VK_NULL_HANDLE;
+    DxvkDescriptor descriptor = { };
+    descriptor.legacy.image.imageLayout = key.layout;
 
     VkResult vr = m_vkd->vkCreateImageView(
-      m_vkd->device(), &info, nullptr, &view);
+      m_vkd->device(), &info, nullptr, &descriptor.legacy.image.imageView);
 
     if (vr != VK_SUCCESS)
       throw DxvkError(str::format("Failed to create Vulkan image view: ", vr));
 
-    m_views.insert({ key, view });
-    return view;
+    entry = m_views.insert({ key, descriptor }).first;
+    return &entry->second;
   }
 
 
@@ -176,7 +186,7 @@ namespace dxvk {
   }
 
 
-  VkBufferView DxvkResourceAllocation::createBufferView(
+  const DxvkDescriptor* DxvkResourceAllocation::createBufferView(
     const DxvkBufferViewKey&          key) {
     if (unlikely(!m_bufferViews))
       m_bufferViews = new DxvkResourceBufferViewMap(m_allocator, m_buffer);
@@ -185,7 +195,7 @@ namespace dxvk {
   }
 
 
-  VkImageView DxvkResourceAllocation::createImageView(
+  const DxvkDescriptor* DxvkResourceAllocation::createImageView(
     const DxvkImageViewKey&           key) {
     if (unlikely(!m_imageViews))
       m_imageViews = new DxvkResourceImageViewMap(m_allocator, m_image);
