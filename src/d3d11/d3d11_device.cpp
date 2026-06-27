@@ -3402,7 +3402,8 @@ namespace dxvk {
     m_d3d11Reflex   (this, &m_d3d11Device),
     m_d3d11on12     (this, &m_d3d11Device, pD3D12Device, pD3D12Queue),
     m_metaDevice    (this),
-    m_dxvkFactory   (this, &m_d3d11Device) {
+    m_dxvkFactory   (this, &m_d3d11Device),
+    m_destructionNotifier(this) {
 
   }
   
@@ -3491,13 +3492,18 @@ namespace dxvk {
       return context->QueryInterface(riid, ppvObject);
     }
 
+    if (riid == __uuidof(ID3DDestructionNotifier)) {
+      *ppvObject = ref(&m_destructionNotifier);
+      return S_OK;
+    }
+
     if (riid == __uuidof(ID3D11Debug))
       return E_NOINTERFACE;      
-    
+
     // Undocumented interfaces that are queried by some games
     if (riid == GUID{0xd56e2a4c,0x5127,0x8437,{0x65,0x8a,0x98,0xc5,0xbb,0x78,0x94,0x98}})
       return E_NOINTERFACE;
-    
+
     if (logQueryInterfaceError(__uuidof(IDXGIDXVKDevice), riid)) {
       Logger::warn("D3D11DXGIDevice::QueryInterface: Unknown interface query");
       Logger::warn(str::format(riid));

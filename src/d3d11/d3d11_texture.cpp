@@ -1211,8 +1211,9 @@ namespace dxvk {
     m_interop (this, &m_texture),
     m_surface (this),
     m_resource(this, pDevice),
-    m_d3d10   (this) {
-    
+    m_d3d10   (this),
+    m_destructionNotifier(this) {
+
   }
   
   
@@ -1265,7 +1266,12 @@ namespace dxvk {
       *ppvObject = ref(&m_interop);
       return S_OK;
     }
-    
+
+    if (riid == __uuidof(ID3DDestructionNotifier)) {
+      *ppvObject = ref(&m_destructionNotifier);
+      return S_OK;
+    }
+
     if (logQueryInterfaceError(__uuidof(ID3D10Texture1D), riid)) {
       Logger::warn("D3D11Texture1D::QueryInterface: Unknown interface query");
       Logger::warn(str::format(riid));
@@ -1323,7 +1329,8 @@ namespace dxvk {
     m_surface   (this),
     m_resource  (this, pDevice),
     m_d3d10     (this),
-    m_swapChain (nullptr) {
+    m_swapChain (nullptr),
+    m_destructionNotifier(this) {
   }
 
 
@@ -1338,8 +1345,9 @@ namespace dxvk {
     m_surface   (this),
     m_resource  (this, pDevice),
     m_d3d10     (this),
-    m_swapChain (nullptr) {
-    
+    m_swapChain (nullptr),
+    m_destructionNotifier(this) {
+
   }
 
 
@@ -1354,8 +1362,9 @@ namespace dxvk {
     m_surface   (this),
     m_resource  (this, pDevice),
     m_d3d10     (this),
-    m_swapChain (pSwapChain) {
-    
+    m_swapChain (pSwapChain),
+    m_destructionNotifier(this) {
+
   }
   
   
@@ -1434,7 +1443,12 @@ namespace dxvk {
       *ppvObject = ref(&m_interop);
       return S_OK;
     }
-    
+
+    if (riid == __uuidof(ID3DDestructionNotifier)) {
+      *ppvObject = ref(&m_destructionNotifier);
+      return S_OK;
+    }
+
     if (logQueryInterfaceError(__uuidof(ID3D10Texture2D), riid)) {
       Logger::warn("D3D11Texture2D::QueryInterface: Unknown interface query");
       Logger::warn(str::format(riid));
@@ -1506,8 +1520,9 @@ namespace dxvk {
     m_texture (this, pDevice, pDesc, p11on12Info, D3D11_RESOURCE_DIMENSION_TEXTURE3D, 0, VK_NULL_HANDLE, nullptr),
     m_interop (this, &m_texture),
     m_resource(this, pDevice),
-    m_d3d10   (this) {
-    
+    m_d3d10   (this),
+    m_destructionNotifier(this) {
+
   }
   
   
@@ -1553,7 +1568,12 @@ namespace dxvk {
       *ppvObject = ref(&m_interop);
       return S_OK;
     }
-    
+
+    if (riid == __uuidof(ID3DDestructionNotifier)) {
+      *ppvObject = ref(&m_destructionNotifier);
+      return S_OK;
+    }
+
     if (logQueryInterfaceError(__uuidof(ID3D10Texture3D), riid)) {
       Logger::warn("D3D11Texture3D::QueryInterface: Unknown interface query");
       Logger::warn(str::format(riid));
