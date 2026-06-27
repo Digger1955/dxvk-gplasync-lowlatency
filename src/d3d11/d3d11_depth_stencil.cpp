@@ -8,7 +8,7 @@ namespace dxvk {
     const D3D11_DEPTH_STENCIL_DESC& desc,
           Container*                container)
   : D3D11StateObject<ID3D11DepthStencilState, D3D11DepthStencilState>(device, container),
-    m_desc(desc), m_d3d10(this) {
+    m_desc(desc), m_d3d10(this), m_destructionNotifier(this) {
     m_state.setDepthTest(desc.DepthEnable);
     m_state.setDepthWrite(desc.DepthWriteMask == D3D11_DEPTH_WRITE_MASK_ALL);
     m_state.setStencilTest(desc.StencilEnable);
@@ -43,7 +43,12 @@ namespace dxvk {
       *ppvObject = ref(&m_d3d10);
       return S_OK;
     }
-    
+
+    if (riid == __uuidof(ID3DDestructionNotifier)) {
+      *ppvObject = ref(&m_destructionNotifier);
+      return S_OK;
+    }
+
     if (logQueryInterfaceError(__uuidof(ID3D11DepthStencilState), riid)) {
       Logger::warn("D3D11DepthStencilState::QueryInterface: Unknown interface query");
       Logger::warn(str::format(riid));

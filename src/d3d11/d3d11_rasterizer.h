@@ -66,7 +66,9 @@ namespace dxvk {
     DxvkRasterizerState    m_state      = { };
     DxvkDepthBias          m_depthBias  = { };
     D3D10RasterizerState   m_d3d10;
-    
+
+    D3DDestructionNotifier m_destructionNotifier;
+
   };
   
 }
