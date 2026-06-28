@@ -6830,7 +6830,7 @@ namespace dxvk {
   }
 
 
-  void DxvkContext::updateFramebuffer(bool isDraw) {
+    void DxvkContext::updateRenderTargets(bool isDraw) {
     if (m_flags.test(DxvkContextFlag::GpDirtyRenderTargets)) {
       m_flags.clr(DxvkContextFlag::GpDirtyRenderTargets);
 
