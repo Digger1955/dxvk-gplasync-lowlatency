@@ -153,25 +153,15 @@ namespace dxvk {
             DxvkRenderTargets&&   targets,
             VkImageAspectFlags    feedbackLoop) {
 
-      m_state.om.renderTargets = std::move(targets);
+      if (likely(m_state.om.renderTargets != targets)) {
+        m_state.om.renderTargets = std::move(targets);
 
-      if (unlikely(m_state.gp.state.om.feedbackLoop() != feedbackLoop)) {
-        m_state.gp.state.om.setFeedbackLoop(feedbackLoop);
-        m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
-      }
+        if (unlikely(m_state.gp.state.om.feedbackLoop() != feedbackLoop)) {
+          m_state.gp.state.om.setFeedbackLoop(feedbackLoop);
+          m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
+        }
 
-      this->resetRenderPassOps(
-        m_state.om.renderTargets,
-        m_state.om.renderPassOps);
-
-      if (!m_state.om.framebufferInfo.hasTargets(m_state.om.renderTargets)) {
-        // Create a new framebuffer object next
-        // time we start rendering something
-        m_flags.set(DxvkContextFlag::GpDirtyFramebuffer);
-      } else {
-        // Don't redundantly spill the render pass if
-        // the same render targets are bound again
-        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
+        m_flags.set(DxvkContextFlag::GpDirtyRenderTargets);
       }
     }
 
@@ -1722,8 +1712,8 @@ namespace dxvk {
     DxvkFramebufferInfo makeFramebufferInfo(
       const DxvkRenderTargets&      renderTargets);
 
-    void updateFramebuffer(bool isDraw = false);
-    
+    void updateRenderTargets(bool isDraw = false);
+
     void applyRenderTargetLoadLayouts();
 
     void applyRenderTargetStoreLayouts();
