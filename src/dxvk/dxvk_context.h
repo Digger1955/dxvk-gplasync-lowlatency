@@ -152,33 +152,16 @@ namespace dxvk {
     void bindRenderTargets(
             DxvkRenderTargets&&   targets,
             VkImageAspectFlags    feedbackLoop) {
-      // Set up default render pass ops and normalize layouts
-      m_state.om.renderTargets = std::move(targets);
 
-      for (uint32_t i = 0; i < MaxNumRenderTargets; i++) {
-        auto& rt = m_state.om.renderTargets.color[i];
+      if (likely(m_state.om.renderTargets != targets)) {
+        m_state.om.renderTargets = std::move(targets);
 
-        if (rt.view)
-          rt.layout = rt.view->pickLayout(rt.layout);
-      }
+        if (unlikely(m_state.gp.state.om.feedbackLoop() != feedbackLoop)) {
+          m_state.gp.state.om.setFeedbackLoop(feedbackLoop);
+          m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
+        }
 
-      if (unlikely(m_state.gp.state.om.feedbackLoop() != feedbackLoop)) {
-        m_state.gp.state.om.setFeedbackLoop(feedbackLoop);
-        m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
-      }
-
-      this->resetRenderPassOps(
-        m_state.om.renderTargets,
-        m_state.om.renderPassOps);
-
-      if (!m_state.om.framebufferInfo.hasTargets(m_state.om.renderTargets)) {
-        // Create a new framebuffer object next
-        // time we start rendering something
-        m_flags.set(DxvkContextFlag::GpDirtyFramebuffer);
-      } else {
-        // Don't redundantly spill the render pass if
-        // the same render targets are bound again
-        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
+        m_flags.set(DxvkContextFlag::GpDirtyRenderTargets);
       }
     }
 
@@ -1413,7 +1396,7 @@ namespace dxvk {
     std::array<DxvkDeferredResolve, MaxNumRenderTargets + 1u> m_deferredResolves = { };
 
     std::vector<VkWriteDescriptorSet> m_descriptorWrites;
-    std::vector<DxvkDescriptorInfo>   m_descriptors;
+    std::vector<DxvkLegacyDescriptor> m_descriptorInfos;
 
     std::array<Rc<DxvkSampler>, MaxNumSamplerSlots> m_samplers;
     std::array<DxvkBufferSlice, MaxNumUniformBufferSlots> m_uniformBuffers;
@@ -1729,8 +1712,8 @@ namespace dxvk {
     DxvkFramebufferInfo makeFramebufferInfo(
       const DxvkRenderTargets&      renderTargets);
 
-    void updateFramebuffer(bool isDraw = false);
-    
+    void updateRenderTargets(bool isDraw = false);
+
     void applyRenderTargetLoadLayouts();
 
     void applyRenderTargetStoreLayouts();

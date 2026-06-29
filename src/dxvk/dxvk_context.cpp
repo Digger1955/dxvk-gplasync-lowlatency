@@ -419,7 +419,7 @@ namespace dxvk {
       // Suspend works here because we'll end up with one of these scenarios:
       // 1) The render pass gets ended for good, in which case we emit barriers
       // 2) The clear gets folded into render pass ops, so the layout is correct
-      // 3) The clear gets executed separately, in which case updateFramebuffer
+      // 3) The clear gets executed separately, in which case updateRenderTargets
       //    will indirectly emit barriers for the given render target.
       // If there is overlap, we need to explicitly transition affected attachments.
       this->spillRenderPass(true);
@@ -1346,9 +1346,9 @@ namespace dxvk {
 
     // Create image views, etc.
     DxvkMetaMipGenViews mipGenerator(imageView);
-    
-    VkImageLayout dstLayout = imageView->pickLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    VkImageLayout srcLayout = imageView->pickLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    VkImageLayout dstLayout = mipGenerator.getDstView(0u)->getLayout();
+    VkImageLayout srcLayout = mipGenerator.getSrcView(0u)->getLayout();
 
     // If necessary, transition first mip level to the read-only layout
     addImageLayoutTransition(*imageView->image(),
@@ -1399,7 +1399,7 @@ namespace dxvk {
       VkExtent3D passExtent = mipGenerator.computePassExtent(i);
       
       // Create descriptor set with the current source view
-      descriptorImage.imageView = mipGenerator.getSrcViewHandle(i);
+      descriptorImage.imageView = mipGenerator.getSrcView(i)->handle();
       descriptorWrite.dstSet = m_descriptorPool->alloc(pipeInfo.layout->getDescriptorSetLayout(0));
       m_cmd->updateDescriptorSets(1, &descriptorWrite);
       
@@ -1417,7 +1417,7 @@ namespace dxvk {
       scissor.extent    = { passExtent.width, passExtent.height };
       
       // Set up rendering info
-      attachmentInfo.imageView = mipGenerator.getDstViewHandle(i);
+      attachmentInfo.imageView = mipGenerator.getDstView(i)->handle();
       renderingInfo.renderArea = scissor;
       renderingInfo.layerCount = passExtent.depth;
       
@@ -1571,7 +1571,7 @@ namespace dxvk {
         found = m_state.om.framebufferInfo.getAttachment(i).view->image() == image;
 
       if (found) {
-        m_flags.set(DxvkContextFlag::GpDirtyFramebuffer);
+        m_flags.set(DxvkContextFlag::GpDirtyRenderTargets);
 
         spillRenderPass(true);
 
@@ -2139,7 +2139,7 @@ namespace dxvk {
       // isn't writable. We can only hit this particular path when starting a render pass,
       // so we can safely manipulate load layouts here.
       int32_t colorIndex = m_state.om.framebufferInfo.getColorAttachmentIndex(attachmentIndex);
-      VkImageLayout renderLayout = m_state.om.framebufferInfo.getAttachment(attachmentIndex).layout;
+      VkImageLayout renderLayout = m_state.om.framebufferInfo.getAttachment(attachmentIndex).view->getLayout();
 
       if (colorIndex < 0) {
         depthOp.loadLayout = m_state.om.renderPassOps.depthOps.loadLayout;
@@ -2179,9 +2179,7 @@ namespace dxvk {
       }
 
       // Set up a temporary render pass to execute the clear
-      VkImageLayout imageLayout = ((clearAspects | discardAspects) & VK_IMAGE_ASPECT_COLOR_BIT)
-        ? imageView->pickLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        : imageView->pickLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+      VkImageLayout imageLayout = imageView->getLayout();
 
       VkRenderingAttachmentInfo attachmentInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
       attachmentInfo.imageView = imageView->handle();
@@ -3611,8 +3609,8 @@ namespace dxvk {
     flushPendingAccesses(*srcView, DxvkAccess::Read);
 
     // Prepare the two images for transfer ops if necessary
-    auto dstLayout = dstView->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    auto srcLayout = srcView->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    auto dstLayout = dstView->image()->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    auto srcLayout = srcView->image()->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
     addImageLayoutTransition(*dstView->image(), dstView->imageSubresources(),
       dstLayout, VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, false);
@@ -4295,7 +4293,7 @@ namespace dxvk {
           VkExtent3D            extent,
           VkImageAspectFlags    aspect,
           VkClearValue          value) {
-    this->updateFramebuffer(true);
+    this->updateRenderTargets(true);
 
     VkPipelineStageFlags clearStages = 0;
     VkAccessFlags clearAccess = 0;
@@ -4324,9 +4322,7 @@ namespace dxvk {
           str::format("Clear view (", dstName ? dstName : "unknown", ")").c_str()));
       }
 
-      clearLayout = (imageView->info().aspects & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))
-        ? imageView->pickLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-        : imageView->pickLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+      clearLayout = imageView->getLayout();
 
       VkExtent3D extent = imageView->mipLevelExtent(0);
 
@@ -5422,10 +5418,12 @@ namespace dxvk {
     // that can be used for rendering.
     bool isDepthStencil = region.dstSubresource.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 
-    DxvkImageUsageInfo usage = { };
-    usage.usage = isDepthStencil
+    VkImageUsageFlagBits usageBit = isDepthStencil
       ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
       : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    DxvkImageUsageInfo usage = { };
+    usage.usage = usageBit;
     usage.viewFormatCount = 1;
     usage.viewFormats = &format;
 
@@ -5439,7 +5437,7 @@ namespace dxvk {
     // Create an image view that we can use to perform the clear
     DxvkImageViewKey key = { };
     key.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    key.usage = usage.usage;
+    key.usage = usageBit;
     key.format = format;
     key.aspects = region.dstSubresource.aspectMask;
     key.layerIndex = region.dstSubresource.baseArrayLayer;
@@ -5513,7 +5511,7 @@ namespace dxvk {
     uint32_t relativeLayer = 0u;
 
     DxvkImageViewKey dstKey = { };
-    dstKey.usage = usage;
+    dstKey.usage = VkImageUsageFlagBits(usage);
     dstKey.aspects = region.dstSubresource.aspectMask;
     dstKey.mipIndex = region.dstSubresource.mipLevel;
     dstKey.mipCount = 1u;
@@ -5801,56 +5799,61 @@ namespace dxvk {
     // Transition all images to the render layout as necessary
     const auto& depthAttachment = framebufferInfo.getDepthTarget();
 
-    if (depthAttachment.layout != ops.depthOps.loadLayout
-     && depthAttachment.view != nullptr) {
-      VkImageAspectFlags depthAspects = depthAttachment.view->info().aspects;
+    if (depthAttachment.view) {
+      VkImageLayout layout = depthAttachment.view->getLayout();
 
-      VkPipelineStageFlags2 depthStages =
-        VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-        VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
-      VkAccessFlags2 depthAccess = VK_ACCESS_2_NONE;
+      if (layout != ops.depthOps.loadLayout) {
+        VkImageAspectFlags depthAspects = depthAttachment.view->info().aspects;
 
-      if (((depthAspects & VK_IMAGE_ASPECT_DEPTH_BIT) && ops.depthOps.loadOpD == VK_ATTACHMENT_LOAD_OP_LOAD)
-       || ((depthAspects & VK_IMAGE_ASPECT_STENCIL_BIT) && ops.depthOps.loadOpS == VK_ATTACHMENT_LOAD_OP_LOAD))
-        depthAccess |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        VkPipelineStageFlags2 depthStages =
+          VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+          VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        VkAccessFlags2 depthAccess = VK_ACCESS_2_NONE;
 
-      if (((depthAspects & VK_IMAGE_ASPECT_DEPTH_BIT) && ops.depthOps.loadOpD != VK_ATTACHMENT_LOAD_OP_LOAD)
-       || ((depthAspects & VK_IMAGE_ASPECT_STENCIL_BIT) && ops.depthOps.loadOpS != VK_ATTACHMENT_LOAD_OP_LOAD)
-       || (depthAttachment.layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL))
-        depthAccess |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        if (((depthAspects & VK_IMAGE_ASPECT_DEPTH_BIT) && ops.depthOps.loadOpD == VK_ATTACHMENT_LOAD_OP_LOAD)
+         || ((depthAspects & VK_IMAGE_ASPECT_STENCIL_BIT) && ops.depthOps.loadOpS == VK_ATTACHMENT_LOAD_OP_LOAD))
+          depthAccess |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
-      if (depthAttachment.layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        depthStages |= m_device->getShaderPipelineStages();
-        depthAccess |= VK_ACCESS_2_SHADER_READ_BIT;
+
+        if (((depthAspects & VK_IMAGE_ASPECT_DEPTH_BIT) && ops.depthOps.loadOpD != VK_ATTACHMENT_LOAD_OP_LOAD)
+         || ((depthAspects & VK_IMAGE_ASPECT_STENCIL_BIT) && ops.depthOps.loadOpS != VK_ATTACHMENT_LOAD_OP_LOAD)
+         || (layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL))
+          depthAccess |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        if (layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+          depthStages |= m_device->getShaderPipelineStages();
+          depthAccess |= VK_ACCESS_2_SHADER_READ_BIT;
+        }
+
+        accessImage(DxvkCmdBuffer::ExecBuffer,
+          *depthAttachment.view->image(),
+          depthAttachment.view->imageSubresources(),
+          ops.depthOps.loadLayout,
+          depthStages, 0, layout,
+          depthStages, depthAccess, DxvkAccessOp::None);
       }
-
-      accessImage(DxvkCmdBuffer::ExecBuffer,
-        *depthAttachment.view->image(),
-        depthAttachment.view->imageSubresources(),
-        ops.depthOps.loadLayout,
-        depthStages, 0,
-        depthAttachment.layout,
-        depthStages, depthAccess, DxvkAccessOp::None);
     }
 
     for (uint32_t i = 0; i < MaxNumRenderTargets; i++) {
       const auto& colorAttachment = framebufferInfo.getColorTarget(i);
 
-      if (colorAttachment.layout != ops.colorOps[i].loadLayout
-       && colorAttachment.view != nullptr) {
-        VkAccessFlags2 colorAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+      if (colorAttachment.view) {
+        VkImageLayout layout = colorAttachment.view->getLayout();
 
-        if (ops.colorOps[i].loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
-          colorAccess |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
+        if (layout != ops.colorOps[i].loadLayout) {
+          VkAccessFlags2 colorAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
 
-        accessImage(DxvkCmdBuffer::ExecBuffer,
-          *colorAttachment.view->image(),
-          colorAttachment.view->imageSubresources(),
-          ops.colorOps[i].loadLayout,
-          VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
-          colorAttachment.layout,
-          VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-          colorAccess, DxvkAccessOp::None);
+          if (ops.colorOps[i].loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
+            colorAccess |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
+
+          accessImage(DxvkCmdBuffer::ExecBuffer,
+            *colorAttachment.view->image(),
+            colorAttachment.view->imageSubresources(),
+            ops.colorOps[i].loadLayout,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 0, layout,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            colorAccess, DxvkAccessOp::None);
+        }
       }
     }
 
@@ -5866,16 +5869,16 @@ namespace dxvk {
     const DxvkRenderPassOps&    ops) {
     const auto& depthAttachment = framebufferInfo.getDepthTarget();
 
-    if (depthAttachment.view != nullptr) {
+    if (depthAttachment.view) {
+      VkImageLayout srcLayout = depthAttachment.view->getLayout();
       VkAccessFlags2 srcAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
-      if (depthAttachment.layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+      if (srcLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
         srcAccess |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
       accessImage(DxvkCmdBuffer::ExecBuffer,
         *depthAttachment.view->image(),
-        depthAttachment.view->imageSubresources(),
-        depthAttachment.layout,
+        depthAttachment.view->imageSubresources(), srcLayout,
         VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
         VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
         srcAccess, ops.depthOps.storeLayout,
@@ -5887,11 +5890,11 @@ namespace dxvk {
     for (uint32_t i = 0; i < MaxNumRenderTargets; i++) {
       const auto& colorAttachment = framebufferInfo.getColorTarget(i);
 
-      if (colorAttachment.view != nullptr) {
+      if (colorAttachment.view) {
         accessImage(DxvkCmdBuffer::ExecBuffer,
           *colorAttachment.view->image(),
           colorAttachment.view->imageSubresources(),
-          colorAttachment.layout,
+          colorAttachment.view->getLayout(),
           VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
           VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT |
           VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -5938,7 +5941,7 @@ namespace dxvk {
         colorFormats[i] = colorTarget.view->info().format;
 
         colorInfo.imageView = colorTarget.view->handle();
-        colorInfo.imageLayout = colorTarget.layout;
+        colorInfo.imageLayout = colorTarget.view->getLayout();
         colorInfo.loadOp = ops.colorOps[i].loadOp;
         colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
@@ -5976,13 +5979,13 @@ namespace dxvk {
     if (depthTarget.view) {
       depthStencilFormat = depthTarget.view->info().format;
       depthStencilAspects = depthTarget.view->info().aspects;
-      depthStencilWritable = vk::getWritableAspectsForLayout(depthTarget.layout);
+      depthStencilWritable = vk::getWritableAspectsForLayout(depthTarget.view->info().layout);
 
       if (!m_device->properties().khrMaintenance7.separateDepthStencilAttachmentAccess && depthStencilWritable)
         depthStencilWritable = depthStencilAspects;
 
       depthInfo.imageView = depthTarget.view->handle();
-      depthInfo.imageLayout = depthTarget.layout;
+      depthInfo.imageLayout = depthTarget.view->getLayout();
       depthInfo.loadOp = ops.depthOps.loadOpD;
       depthInfo.storeOp = (depthStencilWritable & VK_IMAGE_ASPECT_DEPTH_BIT)
         ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_NONE;
@@ -6083,7 +6086,7 @@ namespace dxvk {
         VkImageSubresourceRange subresources = attachment.view->imageSubresources();
 
         if (subresources.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))
-          subresources.aspectMask = vk::getWritableAspectsForLayout(attachment.layout);
+          subresources.aspectMask = vk::getWritableAspectsForLayout(attachment.view->info().layout);
 
         m_implicitResolves.invalidate(*attachment.view->image(), subresources);
       }
@@ -6126,20 +6129,20 @@ namespace dxvk {
   void DxvkContext::resetRenderPassOps(
     const DxvkRenderTargets&    renderTargets,
           DxvkRenderPassOps&    renderPassOps) {
-    if (renderTargets.depth.view != nullptr) {
+    if (renderTargets.depth.view) {
+      VkImageLayout layout = renderTargets.depth.view->getLayout();
+
       renderPassOps.depthOps = DxvkDepthAttachmentOps {
-        VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_LOAD,
-        renderTargets.depth.layout, renderTargets.depth.layout };
+        VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_LOAD, layout, layout };
     } else {
       renderPassOps.depthOps = DxvkDepthAttachmentOps { };
     }
     
     for (uint32_t i = 0; i < MaxNumRenderTargets; i++) {
-      if (renderTargets.color[i].view != nullptr) {
+      if (renderTargets.color[i].view) {
+        VkImageLayout layout = renderTargets.color[i].view->getLayout();
         renderPassOps.colorOps[i] = DxvkColorAttachmentOps {
-            VK_ATTACHMENT_LOAD_OP_LOAD,
-            renderTargets.color[i].layout,
-            renderTargets.color[i].layout };
+            VK_ATTACHMENT_LOAD_OP_LOAD, layout, layout };
       } else {
         renderPassOps.colorOps[i] = DxvkColorAttachmentOps { };
       }
@@ -6527,7 +6530,7 @@ namespace dxvk {
     const auto* pipelineLayout = layout->getLayout();
 
     // Ensure that the arrays we write descriptor info to are big enough
-    if (unlikely(layout->getDescriptorCount() > m_descriptors.size()))
+    if (unlikely(layout->getDescriptorCount() > m_descriptorInfos.size()))
       this->resizeDescriptorArrays(layout->getDescriptorCount());
 
     // On 32-bit wine, vkUpdateDescriptorSets has significant overhead due
@@ -6562,7 +6565,7 @@ namespace dxvk {
           descriptorWrite.descriptorType = binding.getDescriptorType();
         }
 
-        auto& descriptorInfo = m_descriptors[descriptorCount++];
+        auto& descriptorInfo = m_descriptorInfos[descriptorCount++];
 
         if (binding.isUniformBuffer()) {
           const auto& slice = m_uniformBuffers[binding.getResourceIndex()];
@@ -6601,17 +6604,14 @@ namespace dxvk {
 
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE: {
               const auto& res = m_resources[binding.getResourceIndex()];
+              const DxvkDescriptor* descriptor = nullptr;
 
-              VkImageView viewHandle = VK_NULL_HANDLE;
+              if (res.imageView)
+                descriptor = res.imageView->getDescriptor(binding.getViewType());
 
-              if (res.imageView != nullptr)
-                viewHandle = res.imageView->handle(binding.getViewType());
-
-              if (viewHandle) {
+              if (descriptor) {
                 if (likely(!res.imageView->isMultisampled() || binding.isMultisampled())) {
-                  descriptorInfo.image.sampler = VK_NULL_HANDLE;
-                  descriptorInfo.image.imageView = viewHandle;
-                  descriptorInfo.image.imageLayout = res.imageView->defaultLayout();
+                  descriptorInfo = descriptor->legacy;
 
                   if (BindPoint == VK_PIPELINE_BIND_POINT_COMPUTE || unlikely(res.imageView->hasGfxStores())) {
                     accessImage(DxvkCmdBuffer::ExecBuffer, *res.imageView,
@@ -6622,9 +6622,7 @@ namespace dxvk {
                 } else {
                   auto view = m_implicitResolves.getResolveView(*res.imageView, m_trackingId);
 
-                  descriptorInfo.image.sampler = VK_NULL_HANDLE;
-                  descriptorInfo.image.imageView = view->handle(binding.getViewType());
-                  descriptorInfo.image.imageLayout = view->defaultLayout();
+                  descriptorInfo = view->getDescriptor(binding.getViewType())->legacy;
 
                   m_cmd->track(view->image(), DxvkAccess::Read);
                 }
@@ -6637,16 +6635,13 @@ namespace dxvk {
 
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
               const auto& res = m_resources[binding.getResourceIndex()];
+              const DxvkDescriptor* descriptor = nullptr;
 
-              VkImageView viewHandle = VK_NULL_HANDLE;
+              if (res.imageView)
+                descriptor = res.imageView->getDescriptor(binding.getViewType());
 
-              if (res.imageView != nullptr)
-                viewHandle = res.imageView->handle(binding.getViewType());
-
-              if (viewHandle) {
-                descriptorInfo.image.sampler = VK_NULL_HANDLE;
-                descriptorInfo.image.imageView = viewHandle;
-                descriptorInfo.image.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+              if (descriptor) {
+                descriptorInfo = descriptor->legacy;
 
                 if (BindPoint == VK_PIPELINE_BIND_POINT_COMPUTE || res.imageView->hasGfxStores()) {
                   accessImage(DxvkCmdBuffer::ExecBuffer, *res.imageView,
@@ -6666,16 +6661,17 @@ namespace dxvk {
               const auto& res = m_resources[binding.getResourceIndex()];
               const auto& sampler = m_samplers[binding.getResourceIndex()];
 
-              VkImageView viewHandle = VK_NULL_HANDLE;
+              const DxvkDescriptor* descriptor = nullptr;
 
               if (res.imageView && sampler)
-                viewHandle = res.imageView->handle(binding.getViewType());
+                descriptor = res.imageView->getDescriptor(binding.getViewType());
 
-              if (viewHandle) {
+              if (descriptor) {
+                descriptorInfo.image.sampler = sampler->handle();
+
                 if (likely(!res.imageView->isMultisampled() || binding.isMultisampled())) {
-                  descriptorInfo.image.sampler = sampler->handle();
-                  descriptorInfo.image.imageView = viewHandle;
-                  descriptorInfo.image.imageLayout = res.imageView->defaultLayout();
+                  descriptorInfo.image.imageView = descriptor->legacy.image.imageView;
+                  descriptorInfo.image.imageLayout = descriptor->legacy.image.imageLayout;
 
                   if (BindPoint == VK_PIPELINE_BIND_POINT_COMPUTE || unlikely(res.imageView->hasGfxStores())) {
                     accessImage(DxvkCmdBuffer::ExecBuffer, *res.imageView,
@@ -6686,10 +6682,10 @@ namespace dxvk {
                   m_cmd->track(sampler);
                 } else {
                   auto view = m_implicitResolves.getResolveView(*res.imageView, m_trackingId);
+                  descriptor = view->getDescriptor(binding.getViewType());
 
-                  descriptorInfo.image.sampler = sampler->handle();
-                  descriptorInfo.image.imageView = view->handle(binding.getViewType());
-                  descriptorInfo.image.imageLayout = view->defaultLayout();
+                  descriptorInfo.image.imageView = descriptor->legacy.image.imageView;
+                  descriptorInfo.image.imageLayout = descriptor->legacy.image.imageLayout;
 
                   m_cmd->track(view->image(), DxvkAccess::Read);
                   m_cmd->track(sampler);
@@ -6705,7 +6701,7 @@ namespace dxvk {
               const auto& res = m_resources[binding.getResourceIndex()];
 
               if (res.bufferView != nullptr) {
-                descriptorInfo.texelBuffer = res.bufferView->handle();
+                descriptorInfo.bufferView = res.bufferView->handle();
 
                 if (BindPoint == VK_PIPELINE_BIND_POINT_COMPUTE || unlikely(res.bufferView->buffer()->hasGfxStores())) {
                   accessBuffer(DxvkCmdBuffer::ExecBuffer, *res.bufferView,
@@ -6715,7 +6711,7 @@ namespace dxvk {
                 m_cmd->track(res.bufferView->buffer(), DxvkAccess::Read);
 
               } else {
-                descriptorInfo.texelBuffer = VK_NULL_HANDLE;
+                descriptorInfo.bufferView = VK_NULL_HANDLE;
               }
             } break;
 
@@ -6723,7 +6719,7 @@ namespace dxvk {
               const auto& res = m_resources[binding.getResourceIndex()];
 
               if (res.bufferView != nullptr) {
-                descriptorInfo.texelBuffer = res.bufferView->handle();
+                descriptorInfo.bufferView = res.bufferView->handle();
 
                 if (BindPoint == VK_PIPELINE_BIND_POINT_COMPUTE || res.bufferView->buffer()->hasGfxStores()) {
                   accessBuffer(DxvkCmdBuffer::ExecBuffer, *res.bufferView,
@@ -6733,7 +6729,7 @@ namespace dxvk {
                 m_cmd->track(res.bufferView->buffer(), (binding.getAccess() & vk::AccessWriteMask)
                   ? DxvkAccess::Write : DxvkAccess::Read);
               } else {
-                descriptorInfo.texelBuffer = VK_NULL_HANDLE;
+                descriptorInfo.bufferView = VK_NULL_HANDLE;
               }
             } break;
 
@@ -6785,7 +6781,7 @@ namespace dxvk {
       if (useDescriptorTemplates) {
         m_cmd->updateDescriptorSetWithTemplate(sets[setIndex],
           pipelineLayout->getDescriptorSetLayout(setIndex)->getSetUpdateTemplate(),
-          &m_descriptors[0]);
+          &m_descriptorInfos[0]);
         descriptorCount = 0;
       }
 
@@ -6834,29 +6830,48 @@ namespace dxvk {
   }
 
 
-  void DxvkContext::updateFramebuffer(bool isDraw) {
-    if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
-      m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
+    void DxvkContext::updateRenderTargets(bool isDraw) {
+    if (m_flags.test(DxvkContextFlag::GpDirtyRenderTargets)) {
+      m_flags.clr(DxvkContextFlag::GpDirtyRenderTargets);
+
+      if (m_flags.test(DxvkContextFlag::GpRenderPassBound) && !m_flags.test(DxvkContextFlag::GpRenderPassNeedsFlush)) {
+        // Only interrupt an active render pass if the render targets have actually
+        // changed since the last update. There are cases where client APIs cannot
+        // know in advance that consecutive draws use the same set of render targets.
+        if (m_state.om.renderTargets == m_state.om.framebufferInfo.attachments())
+          return;
+      }
+
+      // End active render pass and reset load/store ops for the new render targets.
+      DxvkFramebufferInfo fbInfo = makeFramebufferInfo(m_state.om.renderTargets);
+      this->updateRenderTargetLayouts(fbInfo, m_state.om.framebufferInfo);
+
 
       this->spillRenderPass(true);
 
-      DxvkFramebufferInfo fbInfo = makeFramebufferInfo(m_state.om.renderTargets);
-      this->updateRenderTargetLayouts(fbInfo, m_state.om.framebufferInfo);
+      this->resetRenderPassOps(
+        m_state.om.renderTargets,
+        m_state.om.renderPassOps);
+
+      this->updateRenderTargetLayouts(fbInfo,
+        m_state.om.framebufferInfo);
 
       // Update relevant graphics pipeline state
       m_state.gp.state.ms.setSampleCount(fbInfo.getSampleCount());
       m_state.gp.state.rt = fbInfo.getRtInfo();
-      m_state.om.framebufferInfo = fbInfo;
 
       for (uint32_t i = 0; i < MaxNumRenderTargets; i++) {
-        const Rc<DxvkImageView>& attachment = fbInfo.getColorTarget(i).view;
+        const auto& attachment = fbInfo.getColorTarget(i).view;
 
-        VkComponentMapping mapping = attachment != nullptr
-          ? util::invertComponentMapping(attachment->info().unpackSwizzle())
-          : VkComponentMapping();
+        VkComponentMapping mapping = VkComponentMapping();
+
+        if (attachment)
+          mapping = util::invertComponentMapping(attachment->info().unpackSwizzle());
 
         m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
       }
+
+       m_state.om.framebufferInfo = std::move(fbInfo);
 
       if (isDraw) {
         for (uint32_t i = 0; i < fbInfo.numAttachments(); i++)
@@ -7544,9 +7559,9 @@ namespace dxvk {
     }
 
     // End render pass if there are pending resolves
-    if (m_flags.any(DxvkContextFlag::GpDirtyFramebuffer,
+    if (m_flags.any(DxvkContextFlag::GpDirtyRenderTargets,
                     DxvkContextFlag::GpRenderPassNeedsFlush))
-      this->updateFramebuffer(true);
+      this->updateRenderTargets(true);
 
     if (m_flags.test(DxvkContextFlag::GpXfbActive)) {
       // If transform feedback is active and there is a chance that we might
@@ -8401,16 +8416,16 @@ namespace dxvk {
 
   void DxvkContext::resizeDescriptorArrays(
           uint32_t                  bindingCount) {
-    m_descriptors.resize(bindingCount);
+    m_descriptorInfos.resize(bindingCount);
     m_descriptorWrites.resize(bindingCount);
 
     for (uint32_t i = 0; i < bindingCount; i++) {
       m_descriptorWrites[i] = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
       m_descriptorWrites[i].descriptorCount = 1;
       m_descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-      m_descriptorWrites[i].pImageInfo = &m_descriptors[i].image;
-      m_descriptorWrites[i].pBufferInfo = &m_descriptors[i].buffer;
-      m_descriptorWrites[i].pTexelBufferView = &m_descriptors[i].texelBuffer;
+      m_descriptorWrites[i].pImageInfo = &m_descriptorInfos[i].image;
+      m_descriptorWrites[i].pBufferInfo = &m_descriptorInfos[i].buffer;
+      m_descriptorWrites[i].pTexelBufferView = &m_descriptorInfos[i].bufferView;
     }
   }
 
@@ -8455,7 +8470,7 @@ namespace dxvk {
       DxvkContextFlag::GpIndependentSets);
 
     m_flags.set(
-      DxvkContextFlag::GpDirtyFramebuffer,
+      DxvkContextFlag::GpDirtyRenderTargets,
       DxvkContextFlag::GpDirtyPipeline,
       DxvkContextFlag::GpDirtyPipelineState,
       DxvkContextFlag::GpDirtyVertexBuffers,
