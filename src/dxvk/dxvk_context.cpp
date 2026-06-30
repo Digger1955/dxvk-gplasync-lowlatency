@@ -217,6 +217,7 @@ namespace dxvk {
       srcView->info().unpackSwizzle());
 
     bool useFb = dstView->image()->info().sampleCount != VK_SAMPLE_COUNT_1_BIT
+              || srcView->image()->info().sampleCount != VK_SAMPLE_COUNT_1_BIT
               || dstView->image()->info().format != dstView->info().format
               || srcView->image()->info().format != srcView->info().format
               || !util::isIdentityMapping(mapping);
@@ -1390,7 +1391,8 @@ namespace dxvk {
     
     // Retrieve a compatible pipeline to use for rendering
     DxvkMetaBlitPipeline pipeInfo = m_common->metaBlit().getPipeline(
-      mipGenerator.getSrcViewType(), imageView->info().format, VK_SAMPLE_COUNT_1_BIT);
+      mipGenerator.getSrcViewType(), imageView->info().format,
+      VK_SAMPLE_COUNT_1_BIT, VK_SAMPLE_COUNT_1_BIT);
 
     VkPipelineLayout pipelineLayout = pipeInfo.layout->getPipelineLayout(false);
 
@@ -3513,6 +3515,7 @@ namespace dxvk {
     // Bind pipeline
     DxvkMetaBlitPipeline pipeInfo = m_common->metaBlit().getPipeline(
       dstView->info().viewType, dstView->info().format,
+      srcView->image()->info().sampleCount,
       dstView->image()->info().sampleCount);
 
     VkPipelineLayout pipelineLayout = pipeInfo.layout->getPipelineLayout(false);
@@ -3562,15 +3565,27 @@ namespace dxvk {
     VkExtent3D srcExtent = srcView->mipLevelExtent(0);
 
     DxvkMetaBlitPushConstants pushConstants = { };
-    pushConstants.srcCoord0 = {
-      float(srcOffsetsAdjusted[0].x) / float(srcExtent.width),
-      float(srcOffsetsAdjusted[0].y) / float(srcExtent.height),
-      float(srcOffsetsAdjusted[0].z) / float(srcExtent.depth) };
-    pushConstants.srcCoord1 = {
-      float(srcOffsetsAdjusted[1].x) / float(srcExtent.width),
-      float(srcOffsetsAdjusted[1].y) / float(srcExtent.height),
-      float(srcOffsetsAdjusted[1].z) / float(srcExtent.depth) };
     pushConstants.layerCount = dstView->info().layerCount;
+    if (srcView->image()->info().sampleCount == VK_SAMPLE_COUNT_1_BIT) {
+      pushConstants.srcCoord0 = {
+        float(srcOffsetsAdjusted[0].x) / float(srcExtent.width),
+        float(srcOffsetsAdjusted[0].y) / float(srcExtent.height),
+        float(srcOffsetsAdjusted[0].z) / float(srcExtent.depth) };
+      pushConstants.srcCoord1 = {
+        float(srcOffsetsAdjusted[1].x) / float(srcExtent.width),
+        float(srcOffsetsAdjusted[1].y) / float(srcExtent.height),
+        float(srcOffsetsAdjusted[1].z) / float(srcExtent.depth) };
+    } else {
+      // Src coords are in texels rather than 0.0 - 1.0
+      pushConstants.srcCoord0 = {
+        float(srcOffsetsAdjusted[0].x),
+        float(srcOffsetsAdjusted[0].y),
+        float(srcOffsetsAdjusted[0].z) };
+      pushConstants.srcCoord1 = {
+        float(srcOffsetsAdjusted[1].x),
+        float(srcOffsetsAdjusted[1].y),
+        float(srcOffsetsAdjusted[1].z) };
+    }
 
     m_cmd->cmdPushConstants(DxvkCmdBuffer::ExecBuffer,
       pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
